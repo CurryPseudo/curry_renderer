@@ -1,4 +1,6 @@
-use std::path::Path;
+use std::sync::Arc;
+
+use egui::ColorImage;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)]
@@ -7,17 +9,6 @@ pub struct App {
     persistent_state: AppPersistentState,
     viewport_image_data: egui::ImageData,
     viewport_texture_handle: egui::TextureHandle,
-}
-
-fn load_image_from_path(path: &std::path::Path) -> Result<egui::ColorImage, image::ImageError> {
-    let image = image::io::Reader::open(path)?.decode()?;
-    let size = [image.width() as _, image.height() as _];
-    let image_buffer = image.to_rgba8();
-    let pixels = image_buffer.as_flat_samples();
-    Ok(egui::ColorImage::from_rgba_unmultiplied(
-        size,
-        pixels.as_slice(),
-    ))
 }
 
 impl App {
@@ -35,9 +26,8 @@ impl App {
         };
 
         let viewport_image_data: egui::ImageData =
-            load_image_from_path(Path::new("assets/icon-1024.png"))
-                .unwrap()
-                .into();
+            egui::ImageData::Color(Arc::new(ColorImage::new([1, 1], egui::Color32::BLACK)));
+
         let viewport_texture_handle = cc.egui_ctx.load_texture(
             "viewport",
             viewport_image_data.clone(),
@@ -62,11 +52,34 @@ impl eframe::App for App {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.image((
-                self.viewport_texture_handle.id(),
-                egui::Vec2::splat(ui.available_size().min_elem()),
+        egui::SidePanel::new(egui::panel::Side::Left, "left_panel").show(ctx, |ui| {
+            ui.label(format!(
+                "viewport width: {}",
+                self.viewport_image_data.width()
             ));
+            ui.label(format!(
+                "viewport height: {}",
+                self.viewport_image_data.height()
+            ));
+        });
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let expect_ui_size = ui.available_size();
+            let expect_image_size = [expect_ui_size.x as usize, expect_ui_size.y as usize];
+            if expect_image_size != self.viewport_image_data.size() {
+                self.viewport_image_data = egui::ImageData::Color(Arc::new(ColorImage::new(
+                    expect_image_size,
+                    egui::Color32::BLACK,
+                )));
+                self.viewport_texture_handle = ctx.load_texture(
+                    "viewport",
+                    self.viewport_image_data.clone(),
+                    egui::TextureOptions {
+                        magnification: egui::TextureFilter::Nearest,
+                        minification: egui::TextureFilter::Nearest,
+                    },
+                );
+            }
+            ui.image((self.viewport_texture_handle.id(), expect_ui_size));
         });
     }
 }
