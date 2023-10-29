@@ -3,6 +3,7 @@ use crate::*;
 #[derive(Default)]
 pub struct CpuRenderer {
     msaa_enable: bool,
+    msaa_use_area: bool,
 }
 
 impl Renderer for CpuRenderer {
@@ -26,22 +27,40 @@ impl Renderer for CpuRenderer {
                 let size = new_color_image.size;
                 for y in 0..size[1] {
                     for x in 0..size[0] {
-                        let p = vec2(x as f32, y as f32);
+                        let p = vec2(x as f32, y as f32) + Vec2::splat(0.5);
                         if self.msaa_enable {
-                            let mut area_sum = 0.0;
-                            for x in 0..2 {
-                                for y in 0..2 {
-                                    let sub_pixel = Rect::from_center_size(
-                                        p - Vec2::splat(0.5) + vec2(x as f32, y as f32) * 0.5,
-                                        Vec2::splat(0.5),
-                                    );
-                                    let area = overlap_area(triangle, &sub_pixel);
-                                    area_sum += area;
+                            if self.msaa_use_area {
+                                let mut area_sum = 0.0;
+                                for x in 0..2 {
+                                    for y in 0..2 {
+                                        let sub_pixel = Rect::from_center_size(
+                                            p - Vec2::splat(0.25) + vec2(x as f32, y as f32) * 0.5,
+                                            Vec2::splat(0.5),
+                                        );
+                                        let area = overlap_area(triangle, &sub_pixel);
+                                        area_sum += area;
+                                    }
                                 }
-                            }
-                            if area_sum > 0.0 {
-                                new_color_image.pixels[y * size[0] + x] =
-                                    egui::Color32::RED.linear_multiply(area_sum);
+                                if area_sum > 0.0 {
+                                    new_color_image.pixels[y * size[0] + x] =
+                                        egui::Color32::from_rgb((area_sum * 255.0) as u8, 0, 0);
+                                }
+                            } else {
+                                let mut area_sum = 0.0;
+                                for x in 0..2 {
+                                    for y in 0..2 {
+                                        let sub_p =
+                                            p - Vec2::splat(0.25) + vec2(x as f32, y as f32) * 0.5;
+                                        if triangle.contains(sub_p) {
+                                            area_sum += 0.25;
+                                        }
+                                    }
+                                }
+                                if area_sum > 0.0 {
+                                    assert!(area_sum <= 1.0);
+                                    new_color_image.pixels[y * size[0] + x] =
+                                        egui::Color32::from_rgb((area_sum * 255.0) as u8, 0, 0);
+                                }
                             }
                         } else {
                             if triangle.contains(p) {
