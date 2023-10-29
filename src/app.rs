@@ -67,10 +67,9 @@ impl eframe::App for App {
             ui.label(format!("Width: {}", viewport_width));
             ui.label(format!("Height: {}", viewport_height));
             ui.heading("Renderer");
-            let mut msaa_enable = self.renderer.get_msaa_enable();
-            if ui.checkbox(&mut msaa_enable, "MSAA").changed() {
-                self.renderer.set_msaa_enable(msaa_enable);
-            };
+            let antialiasing_config = self.renderer.antialiasing_config_mut();
+            ui.checkbox(&mut antialiasing_config.msaa_enable, "MSAA");
+            ui.checkbox(&mut antialiasing_config.ssaa_enable, "SSAA");
             ui.heading("Triangle");
             let viewport_width = viewport_width as f32;
             let viewport_height = viewport_height as f32;
