@@ -2,3 +2,6 @@
 
 mod app;
 pub use app::App;
+
+mod renderer;
+pub use renderer::*;
