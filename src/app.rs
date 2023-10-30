@@ -1,4 +1,6 @@
+mod viewport_editor;
 use crate::*;
+pub use viewport_editor::*;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)]
@@ -9,9 +11,7 @@ pub struct App {
     triangle: Triangle,
     renderer: Box<dyn Renderer>,
     frame_time: std::time::Duration,
-    grabing: bool,
-    zoom_in: f32,
-    zoom_offset: Vec2,
+    viewport_editor: ViewportEditor,
 }
 
 impl App {
@@ -34,9 +34,7 @@ impl App {
             triangle: Triangle::new(vec2(370.0, 320.0), vec2(490.0, 120.0), vec2(200.0, 220.0)),
             renderer,
             frame_time: Default::default(),
-            zoom_in: 1.0,
-            zoom_offset: Vec2::ZERO,
-            grabing: false,
+            viewport_editor: ViewportEditor::default(),
         }
     }
 }
@@ -52,12 +50,7 @@ impl eframe::App for App {
         let frame_begin = std::time::Instant::now();
         egui::SidePanel::new(egui::panel::Side::Left, "left_panel").show(ctx, |ui| {
             let size = self.frame_buffer.size();
-            ui.heading("Viewport");
-            ui.label(format!("Width: {}", size.x));
-            ui.label(format!("Height: {}", size.y));
-            ui.label(format!("Zoom: {:.3}", self.zoom_in));
-            ui.label(format!("Zoom Offset X: {:.3}", self.zoom_offset.x));
-            ui.label(format!("Zoom Offset Y: {:.3}", self.zoom_offset.y));
+            self.viewport_editor.update_side_panel(ui);
             ui.heading("Renderer");
             let antialiasing_config = self.renderer.antialiasing_config_mut();
             ui.checkbox(&mut antialiasing_config.msaa_enable, "MSAA");
@@ -86,6 +79,8 @@ impl eframe::App for App {
             let expect_image_size = expect_ui_size.as_uvec2();
             if expect_image_size != self.frame_buffer.size() {
                 self.frame_buffer.resize(expect_image_size);
+                self.viewport_editor
+                    .set_world_size(expect_image_size.as_vec2());
             }
             self.renderer
                 .clear(self.frame_buffer.as_render_target_mut());
@@ -95,49 +90,10 @@ impl eframe::App for App {
             let viewport_rect = ui
                 .add(
                     egui::Image::new((self.frame_buffer.as_egui_texture_id(ctx), expect_ui_size))
-                        .uv(egui::Rect {
-                            min: (self.zoom_offset / self.frame_buffer.size().as_vec2())
-                                .as_egui_pos(),
-                            max: (self.zoom_offset / self.frame_buffer.size().as_vec2()
-                                + 1.0 / self.zoom_in)
-                                .as_egui_pos(),
-                        }),
+                        .uv(self.viewport_editor.viewport_uv()),
                 )
                 .rect;
-            ui.input(|input| {
-                if !input.pointer.button_down(egui::PointerButton::Primary) {
-                    self.grabing = false;
-                }
-                if let Some(cursor_pos) = input.pointer.hover_pos() {
-                    if viewport_rect.contains(cursor_pos) {
-                        let cursor_pos = cursor_pos - viewport_rect.min;
-                        if input.pointer.button_down(egui::PointerButton::Primary) {
-                            self.grabing = true;
-                        }
-                        if input.scroll_delta.y != 0.0 {
-                            let cursor_world_pos =
-                                self.zoom_offset + cursor_pos.as_vec2() / self.zoom_in;
-                            self.zoom_in *= 1.0 + input.scroll_delta.y / 1000.0;
-                            self.zoom_in = self.zoom_in.clamp(1.0, 100.0);
-                            self.zoom_offset =
-                                cursor_world_pos - cursor_pos.as_vec2() / self.zoom_in;
-                        }
-                    }
-                }
-                if self.grabing {
-                    let delta = input.pointer.delta().as_vec2();
-                    self.zoom_offset -= delta / self.zoom_in;
-                }
-                self.zoom_offset = self.zoom_offset.clamp(
-                    Vec2::ZERO,
-                    self.frame_buffer.size().as_vec2() * (1.0 - 1.0 / self.zoom_in),
-                );
-            });
-            if self.grabing {
-                ui.output_mut(|output| {
-                    output.cursor_icon = egui::CursorIcon::Grabbing;
-                })
-            }
+            self.viewport_editor.update_post_viewport(ui, viewport_rect);
         });
     }
 }
