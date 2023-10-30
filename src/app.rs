@@ -7,7 +7,6 @@ pub use viewport_editor::*;
 pub struct AppPersistentState {}
 pub struct App {
     persistent_state: AppPersistentState,
-    frame_buffer: Box<dyn FrameBuffer>,
     triangle: Triangle,
     renderer: Box<dyn Renderer>,
     frame_time: std::time::Duration,
@@ -30,7 +29,6 @@ impl App {
         let renderer = Box::new(CpuRenderer::default());
         Self {
             persistent_state,
-            frame_buffer: renderer.create_frame_buffer(UVec2::ONE),
             triangle: Triangle::new(vec2(370.0, 320.0), vec2(490.0, 120.0), vec2(200.0, 220.0)),
             renderer,
             frame_time: Default::default(),
@@ -47,27 +45,20 @@ impl eframe::App for App {
 
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let frame_begin = std::time::Instant::now();
+        let frame_size = self.renderer.frame_size();
         egui::SidePanel::new(egui::panel::Side::Left, "left_panel").show(ctx, |ui| {
-            let size = self.frame_buffer.size();
             self.viewport_editor.update_side_panel(ui);
             ui.heading("Renderer");
-            let antialiasing_config = self.renderer.antialiasing_config_mut();
-            ui.checkbox(&mut antialiasing_config.msaa_enable, "MSAA");
-            if ui
-                .checkbox(&mut antialiasing_config.ssaa_enable, "SSAA")
-                .changed()
-            {
-                self.frame_buffer = self.renderer.create_frame_buffer(self.frame_buffer.size());
-            };
-            let size = size.as_vec2();
+            ui.checkbox(&mut self.renderer.msaa_enable(), "MSAA");
+            ui.checkbox(&mut self.renderer.ssaa_enable(), "SSAA");
             ui.heading("Triangle");
-            ui.add(egui::Slider::new(&mut self.triangle.a.x, 0.0..=size.x).text("a.x"));
-            ui.add(egui::Slider::new(&mut self.triangle.a.y, 0.0..=size.y).text("a.y"));
-            ui.add(egui::Slider::new(&mut self.triangle.b.x, 0.0..=size.x).text("b.x"));
-            ui.add(egui::Slider::new(&mut self.triangle.b.y, 0.0..=size.y).text("b.y"));
-            ui.add(egui::Slider::new(&mut self.triangle.c.x, 0.0..=size.x).text("c.x"));
-            ui.add(egui::Slider::new(&mut self.triangle.c.y, 0.0..=size.y).text("c.y"));
+            let frame_size = frame_size.as_vec2();
+            ui.add(egui::Slider::new(&mut self.triangle.a.x, 0.0..=frame_size.x).text("a.x"));
+            ui.add(egui::Slider::new(&mut self.triangle.a.y, 0.0..=frame_size.y).text("a.y"));
+            ui.add(egui::Slider::new(&mut self.triangle.b.x, 0.0..=frame_size.x).text("b.x"));
+            ui.add(egui::Slider::new(&mut self.triangle.b.y, 0.0..=frame_size.y).text("b.y"));
+            ui.add(egui::Slider::new(&mut self.triangle.c.x, 0.0..=frame_size.x).text("c.x"));
+            ui.add(egui::Slider::new(&mut self.triangle.c.y, 0.0..=frame_size.y).text("c.y"));
             ui.heading("Performance");
             ui.label(format!(
                 "Frame time: {:.3}ms",
@@ -77,19 +68,20 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             let expect_ui_size = ui.available_size();
             let expect_image_size = expect_ui_size.as_uvec2();
-            if expect_image_size != self.frame_buffer.size() {
-                self.frame_buffer.resize(expect_image_size);
+            if expect_image_size != frame_size {
+                self.renderer.resize_frame(expect_image_size);
                 self.viewport_editor
                     .set_world_size(expect_image_size.as_vec2());
             }
-            self.renderer
-                .clear(self.frame_buffer.as_render_target_mut());
-            self.renderer
-                .draw_triangle(&self.triangle, self.frame_buffer.as_render_target_mut());
-            self.frame_time = frame_begin.elapsed();
+            self.renderer.render_current_frame_if_ready(&|frame| {
+                self.renderer.clear(frame.as_render_target_mut());
+                self.renderer
+                    .draw_triangle(&self.triangle, frame.as_render_target_mut());
+            });
+            self.frame_time = self.renderer.last_frame_time();
             let viewport_rect = ui
                 .add(
-                    egui::Image::new((self.frame_buffer.as_egui_texture_id(ctx), expect_ui_size))
+                    egui::Image::new((self.renderer.present(ctx), expect_ui_size))
                         .uv(self.viewport_editor.viewport_uv()),
                 )
                 .rect;
