@@ -1,8 +1,3 @@
-use std::{
-    cell::{Cell, RefCell},
-    ops::DerefMut,
-};
-
 use crate::*;
 mod frame_buffer;
 pub use frame_buffer::*;
@@ -11,8 +6,8 @@ mod render_target;
 pub struct CpuRenderer {
     msaa_enable: bool,
     ssaa_enable: bool,
-    frame_buffer: RefCell<CpuFrameBuffer>,
-    last_frame_time: Cell<std::time::Duration>,
+    frame_buffer: CpuFrameBuffer,
+    last_frame_time: std::time::Duration,
 }
 
 pub struct CpuRenderCommandList {
@@ -67,7 +62,7 @@ impl Default for CpuRenderer {
         Self {
             msaa_enable: Default::default(),
             ssaa_enable: Default::default(),
-            frame_buffer: RefCell::new(CpuFrameBuffer::new(UVec2::ONE, 1)),
+            frame_buffer: CpuFrameBuffer::new(UVec2::ONE, 1),
             last_frame_time: Default::default(),
         }
     }
@@ -91,27 +86,27 @@ impl Renderer for CpuRenderer {
     }
 
     fn frame_size(&self) -> UVec2 {
-        self.frame_buffer.borrow().size()
+        self.frame_buffer.size()
     }
 
     fn resize_frame(&mut self, new_size: UVec2) {
-        self.frame_buffer.borrow_mut().resize(new_size);
+        self.frame_buffer.resize(new_size);
     }
 
     fn last_frame_time(&self) -> std::time::Duration {
-        self.last_frame_time.get()
+        self.last_frame_time
     }
 
     fn present(&self, ctx: &egui::Context) -> egui::TextureId {
-        self.frame_buffer.borrow().as_egui_texture_id(ctx)
+        self.frame_buffer.as_egui_texture_id(ctx)
     }
 
     fn render_current_frame_if_ready(
-        &self,
+        &mut self,
         f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
     ) {
         let expect_super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
-        let mut frame_buffer = self.frame_buffer.borrow_mut();
+        let frame_buffer = &mut self.frame_buffer;
         if frame_buffer.super_sampled_scale != expect_super_sampled_scale {
             *frame_buffer = CpuFrameBuffer::new(frame_buffer.size(), expect_super_sampled_scale)
         }
@@ -119,10 +114,7 @@ impl Renderer for CpuRenderer {
         let render_command_list = CpuRenderCommandList {
             msaa_enable: self.msaa_enable,
         };
-        f(
-            &render_command_list,
-            frame_buffer.deref_mut() as &mut dyn FrameBuffer,
-        );
-        self.last_frame_time.set(frame_begin.elapsed());
+        f(&render_command_list, frame_buffer as &mut dyn FrameBuffer);
+        self.last_frame_time = frame_begin.elapsed();
     }
 }

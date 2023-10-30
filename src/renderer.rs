@@ -15,7 +15,7 @@ pub trait Renderer {
     fn frame_size(&self) -> UVec2;
     fn resize_frame(&mut self, new_size: UVec2);
     fn render_current_frame_if_ready(
-        &self,
+        &mut self,
         f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
     );
     fn last_frame_time(&self) -> std::time::Duration;
