@@ -1,4 +1,5 @@
 pub use glam::*;
+pub use uuid::Uuid;
 
 pub use std::sync::Arc;
 
@@ -10,3 +11,6 @@ pub use renderer::*;
 
 mod math;
 pub use math::*;
+
+mod extensions;
+pub use extensions::*;

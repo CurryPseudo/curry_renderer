@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::*;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
@@ -7,8 +5,7 @@ use crate::*;
 pub struct AppPersistentState {}
 pub struct App {
     persistent_state: AppPersistentState,
-    viewport_image_data: egui::ImageData,
-    viewport_texture_handle: egui::TextureHandle,
+    frame_buffer: Box<dyn FrameBuffer>,
     triangle: Triangle,
     renderer: Box<dyn Renderer>,
     frame_time: std::time::Duration,
@@ -27,25 +24,12 @@ impl App {
         } else {
             Default::default()
         };
-
-        let viewport_image_data: egui::ImageData = egui::ImageData::Color(Arc::new(
-            egui::ColorImage::new([1, 1], egui::Color32::BLACK),
-        ));
-
-        let viewport_texture_handle = cc.egui_ctx.load_texture(
-            "viewport",
-            viewport_image_data.clone(),
-            egui::TextureOptions {
-                magnification: egui::TextureFilter::Nearest,
-                minification: egui::TextureFilter::Nearest,
-            },
-        );
+        let renderer = Box::new(CpuRenderer::default());
         Self {
             persistent_state,
-            viewport_image_data,
-            viewport_texture_handle,
+            frame_buffer: renderer.create_frame_buffer(UVec2::ONE),
             triangle: Triangle::new(vec2(370.0, 320.0), vec2(490.0, 120.0), vec2(200.0, 220.0)),
-            renderer: Box::new(CpuRenderer::default()),
+            renderer,
             frame_time: Default::default(),
         }
     }
@@ -61,24 +45,27 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let frame_begin = std::time::Instant::now();
         egui::SidePanel::new(egui::panel::Side::Left, "left_panel").show(ctx, |ui| {
-            let viewport_width = self.viewport_image_data.width();
-            let viewport_height = self.viewport_image_data.height();
+            let size = self.frame_buffer.size();
             ui.heading("Viewport");
-            ui.label(format!("Width: {}", viewport_width));
-            ui.label(format!("Height: {}", viewport_height));
+            ui.label(format!("Width: {}", size.x));
+            ui.label(format!("Height: {}", size.y));
             ui.heading("Renderer");
             let antialiasing_config = self.renderer.antialiasing_config_mut();
             ui.checkbox(&mut antialiasing_config.msaa_enable, "MSAA");
-            ui.checkbox(&mut antialiasing_config.ssaa_enable, "SSAA");
+            if ui
+                .checkbox(&mut antialiasing_config.ssaa_enable, "SSAA")
+                .changed()
+            {
+                self.frame_buffer = self.renderer.create_frame_buffer(self.frame_buffer.size());
+            };
+            let size = size.as_vec2();
             ui.heading("Triangle");
-            let viewport_width = viewport_width as f32;
-            let viewport_height = viewport_height as f32;
-            ui.add(egui::Slider::new(&mut self.triangle.a.x, 0.0..=viewport_width).text("a.x"));
-            ui.add(egui::Slider::new(&mut self.triangle.a.y, 0.0..=viewport_height).text("a.y"));
-            ui.add(egui::Slider::new(&mut self.triangle.b.x, 0.0..=viewport_width).text("b.x"));
-            ui.add(egui::Slider::new(&mut self.triangle.b.y, 0.0..=viewport_height).text("b.y"));
-            ui.add(egui::Slider::new(&mut self.triangle.c.x, 0.0..=viewport_width).text("c.x"));
-            ui.add(egui::Slider::new(&mut self.triangle.c.y, 0.0..=viewport_height).text("c.y"));
+            ui.add(egui::Slider::new(&mut self.triangle.a.x, 0.0..=size.x).text("a.x"));
+            ui.add(egui::Slider::new(&mut self.triangle.a.y, 0.0..=size.y).text("a.y"));
+            ui.add(egui::Slider::new(&mut self.triangle.b.x, 0.0..=size.x).text("b.x"));
+            ui.add(egui::Slider::new(&mut self.triangle.b.y, 0.0..=size.y).text("b.y"));
+            ui.add(egui::Slider::new(&mut self.triangle.c.x, 0.0..=size.x).text("c.x"));
+            ui.add(egui::Slider::new(&mut self.triangle.c.y, 0.0..=size.y).text("c.y"));
             ui.heading("Performance");
             ui.label(format!(
                 "Frame time: {:.3}ms",
@@ -87,26 +74,16 @@ impl eframe::App for App {
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let expect_ui_size = ui.available_size();
-            let expect_image_size = [expect_ui_size.x as usize, expect_ui_size.y as usize];
-            if expect_image_size != self.viewport_image_data.size() {
-                self.viewport_image_data = egui::ImageData::Color(Arc::new(egui::ColorImage::new(
-                    expect_image_size,
-                    egui::Color32::BLACK,
-                )));
+            let expect_image_size = expect_ui_size.as_uvec2();
+            if expect_image_size != self.frame_buffer.size() {
+                self.frame_buffer.resize(expect_image_size);
             }
-            self.viewport_texture_handle = ctx.load_texture(
-                "viewport",
-                self.viewport_image_data.clone(),
-                egui::TextureOptions {
-                    magnification: egui::TextureFilter::Nearest,
-                    minification: egui::TextureFilter::Nearest,
-                },
-            );
-            ui.image((self.viewport_texture_handle.id(), expect_ui_size));
+            self.renderer
+                .clear(self.frame_buffer.as_render_target_mut());
+            self.renderer
+                .draw_triangle(&self.triangle, self.frame_buffer.as_render_target_mut());
+            self.frame_time = frame_begin.elapsed();
+            ui.image((self.frame_buffer.as_egui_texture_id(ctx), expect_ui_size));
         });
-        self.renderer.clear(&mut self.viewport_image_data);
-        self.renderer
-            .draw_triangle(&self.triangle, &mut self.viewport_image_data);
-        self.frame_time = frame_begin.elapsed();
     }
 }
