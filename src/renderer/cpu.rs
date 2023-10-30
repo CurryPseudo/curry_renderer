@@ -15,18 +15,10 @@ pub struct CpuRenderer {
     last_frame_time: Cell<std::time::Duration>,
 }
 
-impl Default for CpuRenderer {
-    fn default() -> Self {
-        Self {
-            msaa_enable: Default::default(),
-            ssaa_enable: Default::default(),
-            frame_buffer: RefCell::new(CpuFrameBuffer::new(UVec2::ONE, 1)),
-            last_frame_time: Default::default(),
-        }
-    }
+pub struct CpuRenderCommandList {
+    msaa_enable: bool,
 }
-
-impl Renderer for CpuRenderer {
+impl RenderCommandList for CpuRenderCommandList {
     fn clear(&self, target: &mut dyn RenderTarget) {
         let color_image = target.as_egui_color_image_mut();
         color_image.pixels.fill(egui::Color32::BLACK);
@@ -68,7 +60,20 @@ impl Renderer for CpuRenderer {
             }
         }
     }
+}
 
+impl Default for CpuRenderer {
+    fn default() -> Self {
+        Self {
+            msaa_enable: Default::default(),
+            ssaa_enable: Default::default(),
+            frame_buffer: RefCell::new(CpuFrameBuffer::new(UVec2::ONE, 1)),
+            last_frame_time: Default::default(),
+        }
+    }
+}
+
+impl Renderer for CpuRenderer {
     fn create_frame_buffer(&self, size: UVec2) -> Box<dyn FrameBuffer> {
         if self.ssaa_enable {
             Box::new(CpuFrameBuffer::new(size, 2))
@@ -101,14 +106,23 @@ impl Renderer for CpuRenderer {
         self.frame_buffer.borrow().as_egui_texture_id(ctx)
     }
 
-    fn render_current_frame_if_ready(&self, f: &dyn Fn(&mut dyn FrameBuffer)) {
+    fn render_current_frame_if_ready(
+        &self,
+        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
+    ) {
         let expect_super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
         let mut frame_buffer = self.frame_buffer.borrow_mut();
         if frame_buffer.super_sampled_scale != expect_super_sampled_scale {
             *frame_buffer = CpuFrameBuffer::new(frame_buffer.size(), expect_super_sampled_scale)
         }
         let frame_begin = std::time::Instant::now();
-        f(frame_buffer.deref_mut() as &mut dyn FrameBuffer);
+        let render_command_list = CpuRenderCommandList {
+            msaa_enable: self.msaa_enable,
+        };
+        f(
+            &render_command_list,
+            frame_buffer.deref_mut() as &mut dyn FrameBuffer,
+        );
         self.last_frame_time.set(frame_begin.elapsed());
     }
 }

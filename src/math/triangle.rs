@@ -1,5 +1,6 @@
 use crate::*;
 
+#[derive(Clone, Copy)]
 pub struct Triangle {
     pub a: Vec2,
     pub b: Vec2,

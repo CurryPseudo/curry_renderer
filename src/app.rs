@@ -73,11 +73,13 @@ impl eframe::App for App {
                 self.viewport_editor
                     .set_world_size(expect_image_size.as_vec2());
             }
-            self.renderer.render_current_frame_if_ready(&|frame| {
-                self.renderer.clear(frame.as_render_target_mut());
-                self.renderer
-                    .draw_triangle(&self.triangle, frame.as_render_target_mut());
-            });
+            let triangle = self.triangle.clone();
+            self.renderer.render_current_frame_if_ready(Box::new(
+                move |render_command_list, frame| {
+                    render_command_list.clear(frame.as_render_target_mut());
+                    render_command_list.draw_triangle(&triangle, frame.as_render_target_mut());
+                },
+            ));
             self.frame_time = self.renderer.last_frame_time();
             let viewport_rect = ui
                 .add(
