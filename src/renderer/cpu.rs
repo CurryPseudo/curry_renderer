@@ -3,7 +3,7 @@ mod frame_buffer;
 pub use frame_buffer::*;
 mod render_target;
 
-pub struct CpuRenderer {
+pub struct SyncCpuRenderer {
     msaa_enable: bool,
     ssaa_enable: bool,
     frame_buffer: CpuFrameBuffer,
@@ -57,7 +57,7 @@ impl RenderCommandList for CpuRenderCommandList {
     }
 }
 
-impl Default for CpuRenderer {
+impl Default for SyncCpuRenderer {
     fn default() -> Self {
         Self {
             msaa_enable: Default::default(),
@@ -68,7 +68,7 @@ impl Default for CpuRenderer {
     }
 }
 
-impl Renderer for CpuRenderer {
+impl Renderer for SyncCpuRenderer {
     fn create_frame_buffer(&self, size: UVec2) -> Box<dyn FrameBuffer> {
         if self.ssaa_enable {
             Box::new(CpuFrameBuffer::new(size, 2))
@@ -118,3 +118,74 @@ impl Renderer for CpuRenderer {
         self.last_frame_time = frame_begin.elapsed();
     }
 }
+
+pub struct AsyncCpuRenderer {
+    msaa_enable: bool,
+    ssaa_enable: bool,
+    frame_buffer: CpuFrameBuffer,
+    last_frame_time: std::time::Duration,
+}
+
+impl Default for AsyncCpuRenderer {
+    fn default() -> Self {
+        Self {
+            msaa_enable: Default::default(),
+            ssaa_enable: Default::default(),
+            frame_buffer: CpuFrameBuffer::new(UVec2::ONE, 1),
+            last_frame_time: Default::default(),
+        }
+    }
+}
+
+impl Renderer for AsyncCpuRenderer {
+    fn create_frame_buffer(&self, size: UVec2) -> Box<dyn FrameBuffer> {
+        if self.ssaa_enable {
+            Box::new(CpuFrameBuffer::new(size, 2))
+        } else {
+            Box::new(CpuFrameBuffer::new(size, 1))
+        }
+    }
+
+    fn msaa_enable(&mut self) -> &mut bool {
+        &mut self.msaa_enable
+    }
+
+    fn ssaa_enable(&mut self) -> &mut bool {
+        &mut self.ssaa_enable
+    }
+
+    fn frame_size(&self) -> UVec2 {
+        self.frame_buffer.size()
+    }
+
+    fn resize_frame(&mut self, new_size: UVec2) {
+        self.frame_buffer.resize(new_size);
+    }
+
+    fn last_frame_time(&self) -> std::time::Duration {
+        self.last_frame_time
+    }
+
+    fn present(&self, ctx: &egui::Context) -> egui::TextureId {
+        self.frame_buffer.as_egui_texture_id(ctx)
+    }
+
+    fn render_current_frame_if_ready(
+        &mut self,
+        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
+    ) {
+        let expect_super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
+        let frame_buffer = &mut self.frame_buffer;
+        if frame_buffer.super_sampled_scale != expect_super_sampled_scale {
+            *frame_buffer = CpuFrameBuffer::new(frame_buffer.size(), expect_super_sampled_scale)
+        }
+        let frame_begin = std::time::Instant::now();
+        let render_command_list = CpuRenderCommandList {
+            msaa_enable: self.msaa_enable,
+        };
+        f(&render_command_list, frame_buffer as &mut dyn FrameBuffer);
+        self.last_frame_time = frame_begin.elapsed();
+    }
+}
+
+pub type CpuRenderer = AsyncCpuRenderer;
