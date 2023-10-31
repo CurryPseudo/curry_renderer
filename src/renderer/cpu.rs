@@ -103,7 +103,7 @@ impl Renderer for SyncCpuRenderer {
 
     fn render_current_frame_if_ready(
         &mut self,
-        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
+        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
     ) {
         let expect_super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
         let frame_buffer = &mut self.frame_buffer;
@@ -119,11 +119,16 @@ impl Renderer for SyncCpuRenderer {
     }
 }
 
+struct RenderThreadReturnData {
+    frame_buffer: CpuFrameBuffer,
+    frame_time: std::time::Duration,
+}
 pub struct AsyncCpuRenderer {
     msaa_enable: bool,
     ssaa_enable: bool,
     frame_buffer: CpuFrameBuffer,
     last_frame_time: std::time::Duration,
+    render_thread: Option<std::thread::JoinHandle<RenderThreadReturnData>>,
 }
 
 impl Default for AsyncCpuRenderer {
@@ -133,6 +138,7 @@ impl Default for AsyncCpuRenderer {
             ssaa_enable: Default::default(),
             frame_buffer: CpuFrameBuffer::new(UVec2::ONE, 1),
             last_frame_time: Default::default(),
+            render_thread: None,
         }
     }
 }
@@ -172,19 +178,38 @@ impl Renderer for AsyncCpuRenderer {
 
     fn render_current_frame_if_ready(
         &mut self,
-        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
+        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
     ) {
-        let expect_super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
-        let frame_buffer = &mut self.frame_buffer;
-        if frame_buffer.super_sampled_scale != expect_super_sampled_scale {
-            *frame_buffer = CpuFrameBuffer::new(frame_buffer.size(), expect_super_sampled_scale)
-        }
-        let frame_begin = std::time::Instant::now();
-        let render_command_list = CpuRenderCommandList {
-            msaa_enable: self.msaa_enable,
+        let need_join = if let Some(handle) = &self.render_thread {
+            handle.is_finished()
+        } else {
+            false
         };
-        f(&render_command_list, frame_buffer as &mut dyn FrameBuffer);
-        self.last_frame_time = frame_begin.elapsed();
+        if need_join {
+            let return_data = self.render_thread.take().unwrap().join().unwrap();
+            self.frame_buffer = return_data.frame_buffer;
+            self.last_frame_time = return_data.frame_time;
+        }
+        if self.render_thread.is_some() {
+            return;
+        }
+        let size = self.frame_size();
+        let super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
+        let msaa_enable = self.msaa_enable;
+        self.render_thread = Some(std::thread::spawn(move || {
+            let mut frame_buffer = CpuFrameBuffer::new(size, super_sampled_scale);
+            let frame_begin = std::time::Instant::now();
+            let render_command_list = CpuRenderCommandList { msaa_enable };
+            f(
+                &render_command_list,
+                &mut frame_buffer as &mut dyn FrameBuffer,
+            );
+            let frame_time = frame_begin.elapsed();
+            RenderThreadReturnData {
+                frame_buffer,
+                frame_time,
+            }
+        }));
     }
 }
 

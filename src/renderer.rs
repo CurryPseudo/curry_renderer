@@ -16,7 +16,7 @@ pub trait Renderer {
     fn resize_frame(&mut self, new_size: UVec2);
     fn render_current_frame_if_ready(
         &mut self,
-        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer)>,
+        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
     );
     fn last_frame_time(&self) -> std::time::Duration;
     fn present(&self, ctx: &egui::Context) -> egui::TextureId;
