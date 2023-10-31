@@ -69,14 +69,6 @@ impl Default for SyncCpuRenderer {
 }
 
 impl Renderer for SyncCpuRenderer {
-    fn create_frame_buffer(&self, size: UVec2) -> Box<dyn FrameBuffer> {
-        if self.ssaa_enable {
-            Box::new(CpuFrameBuffer::new(size, 2))
-        } else {
-            Box::new(CpuFrameBuffer::new(size, 1))
-        }
-    }
-
     fn msaa_enable(&mut self) -> &mut bool {
         &mut self.msaa_enable
     }
@@ -144,14 +136,6 @@ impl Default for AsyncCpuRenderer {
 }
 
 impl Renderer for AsyncCpuRenderer {
-    fn create_frame_buffer(&self, size: UVec2) -> Box<dyn FrameBuffer> {
-        if self.ssaa_enable {
-            Box::new(CpuFrameBuffer::new(size, 2))
-        } else {
-            Box::new(CpuFrameBuffer::new(size, 1))
-        }
-    }
-
     fn msaa_enable(&mut self) -> &mut bool {
         &mut self.msaa_enable
     }

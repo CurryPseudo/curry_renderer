@@ -11,7 +11,6 @@ pub use frame_buffer::*;
 pub trait Renderer {
     fn msaa_enable(&mut self) -> &mut bool;
     fn ssaa_enable(&mut self) -> &mut bool;
-    fn create_frame_buffer(&self, size: UVec2) -> Box<dyn FrameBuffer>;
     fn frame_size(&self) -> UVec2;
     fn resize_frame(&mut self, new_size: UVec2);
     fn render_current_frame_if_ready(
