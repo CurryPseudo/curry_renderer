@@ -74,12 +74,13 @@ impl eframe::App for App {
                     .set_world_size(expect_image_size.as_vec2());
             }
             let triangle = self.triangle.clone();
-            self.renderer.render_current_frame_if_ready(Box::new(
-                move |render_command_list, frame| {
-                    render_command_list.clear(frame.as_render_target_mut());
-                    render_command_list.draw_triangle(&triangle, frame.as_render_target_mut());
-                },
-            ));
+            self.renderer
+                .render_current_frame_if_ready(Box::new(move |cmd_list, fb| {
+                    let mut rt = cmd_list.create_render_target(fb.size());
+                    cmd_list.clear(rt.as_mut());
+                    cmd_list.draw_triangle(&triangle, rt.as_mut());
+                    cmd_list.copy_render_target_to_frame_buffer(rt.as_ref(), fb);
+                }));
             self.frame_time = self.renderer.last_frame_time();
             let viewport_rect = ui
                 .add(
@@ -89,5 +90,6 @@ impl eframe::App for App {
                 .rect;
             self.viewport_editor.update_post_viewport(ui, viewport_rect);
         });
+        ctx.request_repaint();
     }
 }

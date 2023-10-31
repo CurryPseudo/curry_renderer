@@ -2,69 +2,51 @@ use super::*;
 pub struct CpuFrameBuffer {
     id: Uuid,
     pub(crate) color_image: egui::ColorImage,
-    pub(crate) super_sampled_scale: u32,
 }
 
 impl CpuFrameBuffer {
-    pub fn new(size: UVec2, super_sampled_scale: u32) -> Self {
+    pub fn new(size: UVec2) -> Self {
         Self {
             id: Uuid::new_v4(),
-            color_image: egui::ColorImage::new(
-                (size * super_sampled_scale).as_array(),
-                egui::Color32::BLACK,
-            ),
-            super_sampled_scale,
+            color_image: egui::ColorImage::new((size).as_array(), egui::Color32::BLACK),
         }
     }
 }
 
-impl FrameBuffer for CpuFrameBuffer {
-    fn as_render_target_mut(&mut self) -> &mut dyn RenderTarget {
+impl Texture for CpuFrameBuffer {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
 
     fn size(&self) -> UVec2 {
-        self.color_image.size.as_uvec2() / self.super_sampled_scale
+        self.color_image.size.as_uvec2()
     }
+}
 
-    fn resize(&mut self, new_size: UVec2) {
-        self.color_image = egui::ColorImage::new(
-            (new_size * self.super_sampled_scale).as_array(),
-            egui::Color32::BLACK,
-        );
-    }
-
+impl FrameBuffer for CpuFrameBuffer {
     fn as_egui_texture_id(&self, ctx: &egui::Context) -> egui::TextureId {
-        let mut downsampled = egui::ColorImage::new(
-            (self.color_image.size.as_uvec2() / self.super_sampled_scale).as_array(),
-            egui::Color32::BLACK,
-        );
-        let size = downsampled.size.as_uvec2();
-        for x in 0..size.x {
-            for y in 0..size.y {
-                let mut pixel_sum = Vec3::ZERO;
-                for dx in 0..self.super_sampled_scale {
-                    for dy in 0..self.super_sampled_scale {
-                        let x = x * self.super_sampled_scale + dx;
-                        let y = y * self.super_sampled_scale + dy;
-                        let pixel = self.color_image.pixels
-                            [(y * (self.color_image.size[0] as u32) + x) as usize];
-                        pixel_sum += pixel.as_vec3();
-                    }
-                }
-                downsampled.pixels[(y * size.x + x) as usize] = (pixel_sum
-                    / ((self.super_sampled_scale * self.super_sampled_scale) as f32))
-                    .as_egui_color32();
-            }
-        }
         ctx.load_texture(
             self.id.to_string(),
-            egui::ImageData::Color(Arc::new(downsampled)),
+            egui::ImageData::Color(Arc::new(self.color_image.clone())),
             egui::TextureOptions {
                 magnification: egui::TextureFilter::Nearest,
                 minification: egui::TextureFilter::Nearest,
             },
         )
         .id()
+    }
+}
+
+impl RenderTarget for CpuFrameBuffer {
+    fn as_egui_color_image_mut(&mut self) -> &mut egui::ColorImage {
+        &mut self.color_image
+    }
+
+    fn image_scale(&self) -> f32 {
+        1.0
     }
 }

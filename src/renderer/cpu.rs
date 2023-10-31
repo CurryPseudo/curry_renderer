@@ -1,7 +1,9 @@
 use crate::*;
 mod frame_buffer;
 pub use frame_buffer::*;
+
 mod render_target;
+pub use render_target::*;
 
 pub struct SyncCpuRenderer {
     msaa_enable: bool,
@@ -12,8 +14,16 @@ pub struct SyncCpuRenderer {
 
 pub struct CpuRenderCommandList {
     msaa_enable: bool,
+    ssaa_enable: bool,
 }
 impl RenderCommandList for CpuRenderCommandList {
+    fn create_render_target(&self, size: UVec2) -> Box<dyn RenderTarget> {
+        Box::new(CpuRenderTarget::new(
+            size,
+            if self.ssaa_enable { 2 } else { 1 },
+        ))
+    }
+
     fn clear(&self, target: &mut dyn RenderTarget) {
         let color_image = target.as_egui_color_image_mut();
         color_image.pixels.fill(egui::Color32::BLACK);
@@ -55,6 +65,38 @@ impl RenderCommandList for CpuRenderCommandList {
             }
         }
     }
+
+    fn copy_render_target_to_frame_buffer(
+        &self,
+        source: &dyn RenderTarget,
+        destination: &mut dyn FrameBuffer,
+    ) {
+        assert_eq!(source.size(), destination.size());
+        let source = source.as_any().downcast_ref::<CpuRenderTarget>().unwrap();
+        let destination = destination
+            .as_any_mut()
+            .downcast_mut::<CpuFrameBuffer>()
+            .unwrap();
+        let downsampled = &mut destination.color_image;
+        let size = downsampled.size.as_uvec2();
+        for x in 0..size.x {
+            for y in 0..size.y {
+                let mut pixel_sum = Vec3::ZERO;
+                for dx in 0..source.super_sampled_scale {
+                    for dy in 0..source.super_sampled_scale {
+                        let x = x * source.super_sampled_scale + dx;
+                        let y = y * source.super_sampled_scale + dy;
+                        let pixel = source.color_image.pixels
+                            [(y * (source.color_image.size[0] as u32) + x) as usize];
+                        pixel_sum += pixel.as_vec3();
+                    }
+                }
+                downsampled.pixels[(y * size.x + x) as usize] = (pixel_sum
+                    / ((source.super_sampled_scale * source.super_sampled_scale) as f32))
+                    .as_egui_color32();
+            }
+        }
+    }
 }
 
 impl Default for SyncCpuRenderer {
@@ -62,7 +104,7 @@ impl Default for SyncCpuRenderer {
         Self {
             msaa_enable: Default::default(),
             ssaa_enable: Default::default(),
-            frame_buffer: CpuFrameBuffer::new(UVec2::ONE, 1),
+            frame_buffer: CpuFrameBuffer::new(UVec2::ONE),
             last_frame_time: Default::default(),
         }
     }
@@ -82,7 +124,7 @@ impl Renderer for SyncCpuRenderer {
     }
 
     fn resize_frame(&mut self, new_size: UVec2) {
-        self.frame_buffer.resize(new_size);
+        self.frame_buffer = CpuFrameBuffer::new(new_size);
     }
 
     fn last_frame_time(&self) -> std::time::Duration {
@@ -97,14 +139,11 @@ impl Renderer for SyncCpuRenderer {
         &mut self,
         f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
     ) {
-        let expect_super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
         let frame_buffer = &mut self.frame_buffer;
-        if frame_buffer.super_sampled_scale != expect_super_sampled_scale {
-            *frame_buffer = CpuFrameBuffer::new(frame_buffer.size(), expect_super_sampled_scale)
-        }
         let frame_begin = std::time::Instant::now();
         let render_command_list = CpuRenderCommandList {
             msaa_enable: self.msaa_enable,
+            ssaa_enable: self.ssaa_enable,
         };
         f(&render_command_list, frame_buffer as &mut dyn FrameBuffer);
         self.last_frame_time = frame_begin.elapsed();
@@ -128,7 +167,7 @@ impl Default for AsyncCpuRenderer {
         Self {
             msaa_enable: Default::default(),
             ssaa_enable: Default::default(),
-            frame_buffer: CpuFrameBuffer::new(UVec2::ONE, 1),
+            frame_buffer: CpuFrameBuffer::new(UVec2::ONE),
             last_frame_time: Default::default(),
             render_thread: None,
         }
@@ -149,7 +188,7 @@ impl Renderer for AsyncCpuRenderer {
     }
 
     fn resize_frame(&mut self, new_size: UVec2) {
-        self.frame_buffer.resize(new_size);
+        self.frame_buffer = CpuFrameBuffer::new(new_size);
     }
 
     fn last_frame_time(&self) -> std::time::Duration {
@@ -171,19 +210,24 @@ impl Renderer for AsyncCpuRenderer {
         };
         if need_join {
             let return_data = self.render_thread.take().unwrap().join().unwrap();
-            self.frame_buffer = return_data.frame_buffer;
-            self.last_frame_time = return_data.frame_time;
+            if return_data.frame_buffer.size() == self.frame_buffer.size() {
+                self.frame_buffer = return_data.frame_buffer;
+                self.last_frame_time = return_data.frame_time;
+            }
         }
         if self.render_thread.is_some() {
             return;
         }
         let size = self.frame_size();
-        let super_sampled_scale = if self.ssaa_enable { 2 } else { 1 };
         let msaa_enable = self.msaa_enable;
+        let ssaa_enable = self.ssaa_enable;
         self.render_thread = Some(std::thread::spawn(move || {
-            let mut frame_buffer = CpuFrameBuffer::new(size, super_sampled_scale);
+            let mut frame_buffer = CpuFrameBuffer::new(size);
             let frame_begin = std::time::Instant::now();
-            let render_command_list = CpuRenderCommandList { msaa_enable };
+            let render_command_list = CpuRenderCommandList {
+                msaa_enable,
+                ssaa_enable,
+            };
             f(
                 &render_command_list,
                 &mut frame_buffer as &mut dyn FrameBuffer,

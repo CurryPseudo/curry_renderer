@@ -8,6 +8,8 @@ mod antialiasing;
 pub use antialiasing::*;
 mod frame_buffer;
 pub use frame_buffer::*;
+mod texture;
+pub use texture::*;
 pub trait Renderer {
     fn msaa_enable(&mut self) -> &mut bool;
     fn ssaa_enable(&mut self) -> &mut bool;
@@ -22,6 +24,12 @@ pub trait Renderer {
 }
 
 pub trait RenderCommandList {
+    fn create_render_target(&self, size: UVec2) -> Box<dyn RenderTarget>;
     fn clear(&self, target: &mut dyn RenderTarget);
     fn draw_triangle(&self, triangle: &Triangle, target: &mut dyn RenderTarget);
+    fn copy_render_target_to_frame_buffer(
+        &self,
+        source: &dyn RenderTarget,
+        destination: &mut dyn FrameBuffer,
+    );
 }
