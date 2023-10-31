@@ -29,7 +29,12 @@ impl RenderCommandList for CpuRenderCommandList {
         color_image.pixels.fill(egui::Color32::BLACK);
     }
 
-    fn draw_triangle(&self, triangle: &Triangle, target: &mut dyn RenderTarget) {
+    fn draw_triangle(
+        &self,
+        triangle: &Triangle,
+        color: egui::Color32,
+        target: &mut dyn RenderTarget,
+    ) {
         let image_scale = target.image_scale();
         let triangle = Triangle {
             a: triangle.a * image_scale,
@@ -54,12 +59,15 @@ impl RenderCommandList for CpuRenderCommandList {
                     }
                     if area_sum > 0.0 {
                         assert!(area_sum <= 1.0);
-                        color_image.pixels[y * size[0] + x] =
-                            egui::Color32::from_rgb((area_sum * 255.0) as u8, 0, 0);
+                        color_image.pixels[y * size[0] + x] = egui::Color32::from_rgb(
+                            (area_sum * color.r() as f32) as u8,
+                            (area_sum * color.g() as f32) as u8,
+                            (area_sum * color.g() as f32) as u8,
+                        );
                     }
                 } else {
                     if triangle.contains(p) {
-                        color_image.pixels[y * size[0] + x] = egui::Color32::RED;
+                        color_image.pixels[y * size[0] + x] = color;
                     }
                 }
             }

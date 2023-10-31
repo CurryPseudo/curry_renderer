@@ -15,3 +15,6 @@ pub use math::*;
 
 mod extensions;
 pub use extensions::*;
+
+mod editor;
+pub use editor::*;
