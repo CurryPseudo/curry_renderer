@@ -20,13 +20,26 @@ impl RenderCommandList for CpuRenderCommandList {
     fn create_render_target(&self, size: UVec2) -> Box<dyn RenderTarget> {
         Box::new(CpuRenderTarget::new(
             size,
+            self.msaa_enable,
             if self.ssaa_enable { 2 } else { 1 },
         ))
     }
 
     fn clear(&self, target: &mut dyn RenderTarget) {
-        let color_image = target.as_egui_color_image_mut();
-        color_image.pixels.fill(egui::Color32::BLACK);
+        let cpu_rt = target
+            .as_any_mut()
+            .downcast_mut::<CpuRenderTarget>()
+            .unwrap();
+        match &mut cpu_rt.image {
+            CpuRenderTargetImage::Idle(image) => {
+                image.pixels.fill(egui::Color32::BLACK);
+            }
+            CpuRenderTargetImage::Multisampled(images) => {
+                for i in 0..4 {
+                    images[i].pixels.fill(egui::Color32::BLACK);
+                }
+            }
+        }
     }
 
     fn draw_triangle(
@@ -42,32 +55,37 @@ impl RenderCommandList for CpuRenderCommandList {
             c: triangle.c * image_scale,
         };
         let triangle = &triangle;
-        let color_image = target.as_egui_color_image_mut();
-        let size = color_image.size;
-        for y in 0..size[1] {
-            for x in 0..size[0] {
-                let p = vec2(x as f32, y as f32) + Vec2::splat(0.5);
-                if self.msaa_enable {
-                    let mut area_sum = 0.0;
-                    for x in 0..2 {
-                        for y in 0..2 {
-                            let sub_p = p - Vec2::splat(0.25) + vec2(x as f32, y as f32) * 0.5;
-                            if triangle.contains(sub_p) {
-                                area_sum += 0.25;
-                            }
+        let cpu_rt = target
+            .as_any_mut()
+            .downcast_mut::<CpuRenderTarget>()
+            .unwrap();
+        match &mut cpu_rt.image {
+            CpuRenderTargetImage::Idle(image) => {
+                let size = image.size.as_uvec2();
+                for y in 0..size.y {
+                    for x in 0..size.x {
+                        let p = vec2(x as f32, y as f32) + Vec2::splat(0.5);
+                        if triangle.contains(p) {
+                            image.pixels[(y * size.x + x) as usize] = color;
                         }
                     }
-                    if area_sum > 0.0 {
-                        assert!(area_sum <= 1.0);
-                        color_image.pixels[y * size[0] + x] = egui::Color32::from_rgb(
-                            (area_sum * color.r() as f32) as u8,
-                            (area_sum * color.g() as f32) as u8,
-                            (area_sum * color.g() as f32) as u8,
-                        );
-                    }
-                } else {
-                    if triangle.contains(p) {
-                        color_image.pixels[y * size[0] + x] = color;
+                }
+            }
+            CpuRenderTargetImage::Multisampled(images) => {
+                let size = images[0].size.as_uvec2();
+                for y in 0..size.y {
+                    for x in 0..size.x {
+                        let p = vec2(x as f32, y as f32) + Vec2::splat(0.5);
+                        for dx in 0..2 {
+                            for dy in 0..2 {
+                                let sub_p =
+                                    p - Vec2::splat(0.25) + vec2(dx as f32, dy as f32) * 0.5;
+                                if triangle.contains(sub_p) {
+                                    images[(dy * 2 + dx) as usize].pixels
+                                        [(y * size.x + x) as usize] = color;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -92,11 +110,24 @@ impl RenderCommandList for CpuRenderCommandList {
                 let mut pixel_sum = Vec3::ZERO;
                 for dx in 0..source.super_sampled_scale {
                     for dy in 0..source.super_sampled_scale {
-                        let x = x * source.super_sampled_scale + dx;
-                        let y = y * source.super_sampled_scale + dy;
-                        let pixel = source.color_image.pixels
-                            [(y * (source.color_image.size[0] as u32) + x) as usize];
-                        pixel_sum += pixel.as_vec3();
+                        let source_x = x * source.super_sampled_scale + dx;
+                        let source_y = y * source.super_sampled_scale + dy;
+                        pixel_sum += match &source.image {
+                            CpuRenderTargetImage::Idle(image) => image.pixels
+                                [(source_y * (image.size[0] as u32) + source_x) as usize]
+                                .as_vec3(),
+                            CpuRenderTargetImage::Multisampled(images) => {
+                                let pixels: Vec3 = images
+                                    .iter()
+                                    .map(|image| {
+                                        image.pixels[(source_y * (image.size[0] as u32) + source_x)
+                                            as usize]
+                                            .as_vec3()
+                                    })
+                                    .sum();
+                                pixels / 4.0
+                            }
+                        };
                     }
                 }
                 downsampled.pixels[(y * size.x + x) as usize] = (pixel_sum

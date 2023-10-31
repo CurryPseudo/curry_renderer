@@ -42,10 +42,6 @@ impl FrameBuffer for CpuFrameBuffer {
 }
 
 impl RenderTarget for CpuFrameBuffer {
-    fn as_egui_color_image_mut(&mut self) -> &mut egui::ColorImage {
-        &mut self.color_image
-    }
-
     fn image_scale(&self) -> f32 {
         1.0
     }
