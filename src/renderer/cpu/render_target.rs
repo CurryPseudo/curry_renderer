@@ -28,6 +28,42 @@ impl CpuRenderTarget {
             super_sampled_scale,
         }
     }
+    pub fn image_count(&self) -> usize {
+        match &self.image {
+            CpuRenderTargetImage::Idle(_) => 1,
+            CpuRenderTargetImage::Multisampled(_) => 4,
+        }
+    }
+    pub fn for_each_image(&self, mut f: impl FnMut(&egui::ColorImage, Vec2)) {
+        match &self.image {
+            CpuRenderTargetImage::Idle(image) => f(image, Vec2::splat(0.5)),
+            CpuRenderTargetImage::Multisampled(images) => {
+                for dy in 0..2 {
+                    for dx in 0..2 {
+                        f(
+                            &images[dy * 2 + dx],
+                            vec2(dx as f32, dy as f32) * 0.5 + Vec2::splat(0.25),
+                        );
+                    }
+                }
+            }
+        }
+    }
+    pub fn for_each_image_mut(&mut self, mut f: impl FnMut(&mut egui::ColorImage, Vec2)) {
+        match &mut self.image {
+            CpuRenderTargetImage::Idle(image) => f(image, Vec2::splat(0.5)),
+            CpuRenderTargetImage::Multisampled(images) => {
+                for dy in 0..2 {
+                    for dx in 0..2 {
+                        f(
+                            &mut images[dy * 2 + dx],
+                            vec2(dx as f32, dy as f32) * 0.5 + Vec2::splat(0.25),
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 impl Texture for CpuRenderTarget {
     fn as_any(&self) -> &dyn Any {

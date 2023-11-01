@@ -30,16 +30,9 @@ impl RenderCommandList for CpuRenderCommandList {
             .as_any_mut()
             .downcast_mut::<CpuRenderTarget>()
             .unwrap();
-        match &mut cpu_rt.image {
-            CpuRenderTargetImage::Idle(image) => {
-                image.pixels.fill(egui::Color32::BLACK);
-            }
-            CpuRenderTargetImage::Multisampled(images) => {
-                for i in 0..4 {
-                    images[i].pixels.fill(egui::Color32::BLACK);
-                }
-            }
-        }
+        cpu_rt.for_each_image_mut(|image, _| {
+            image.pixels.fill(egui::Color32::BLACK);
+        });
     }
 
     fn draw_triangle(
@@ -59,37 +52,17 @@ impl RenderCommandList for CpuRenderCommandList {
             .as_any_mut()
             .downcast_mut::<CpuRenderTarget>()
             .unwrap();
-        match &mut cpu_rt.image {
-            CpuRenderTargetImage::Idle(image) => {
-                let size = image.size.as_uvec2();
-                for y in 0..size.y {
-                    for x in 0..size.x {
-                        let p = vec2(x as f32, y as f32) + Vec2::splat(0.5);
-                        if triangle.contains(p) {
-                            image.pixels[(y * size.x + x) as usize] = color;
-                        }
+        cpu_rt.for_each_image_mut(|image, pixel_offset| {
+            let size = image.size.as_uvec2();
+            for y in 0..size.y {
+                for x in 0..size.x {
+                    let p = vec2(x as f32, y as f32) + pixel_offset;
+                    if triangle.contains(p) {
+                        image.pixels[(y * size.x + x) as usize] = color;
                     }
                 }
             }
-            CpuRenderTargetImage::Multisampled(images) => {
-                let size = images[0].size.as_uvec2();
-                for y in 0..size.y {
-                    for x in 0..size.x {
-                        let p = vec2(x as f32, y as f32) + Vec2::splat(0.5);
-                        for dx in 0..2 {
-                            for dy in 0..2 {
-                                let sub_p =
-                                    p - Vec2::splat(0.25) + vec2(dx as f32, dy as f32) * 0.5;
-                                if triangle.contains(sub_p) {
-                                    images[(dy * 2 + dx) as usize].pixels
-                                        [(y * size.x + x) as usize] = color;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        });
     }
 
     fn copy_render_target_to_frame_buffer(
@@ -112,22 +85,13 @@ impl RenderCommandList for CpuRenderCommandList {
                     for dy in 0..source.super_sampled_scale {
                         let source_x = x * source.super_sampled_scale + dx;
                         let source_y = y * source.super_sampled_scale + dy;
-                        pixel_sum += match &source.image {
-                            CpuRenderTargetImage::Idle(image) => image.pixels
+                        let mut current_pixel_sum = Vec3::ZERO;
+                        source.for_each_image(|image, _| {
+                            current_pixel_sum += image.pixels
                                 [(source_y * (image.size[0] as u32) + source_x) as usize]
-                                .as_vec3(),
-                            CpuRenderTargetImage::Multisampled(images) => {
-                                let pixels: Vec3 = images
-                                    .iter()
-                                    .map(|image| {
-                                        image.pixels[(source_y * (image.size[0] as u32) + source_x)
-                                            as usize]
-                                            .as_vec3()
-                                    })
-                                    .sum();
-                                pixels / 4.0
-                            }
-                        };
+                                .as_vec3();
+                        });
+                        pixel_sum += current_pixel_sum / (source.image_count() as f32);
                     }
                 }
                 downsampled.pixels[(y * size.x + x) as usize] = (pixel_sum
