@@ -38,7 +38,7 @@ impl RenderCommandList for CpuRenderCommandList {
     fn draw_triangle(
         &self,
         triangle: &Triangle,
-        color: egui::Color32,
+        colors: &[egui::Color32; 3],
         target: &mut dyn RenderTarget,
     ) {
         let image_scale = target.image_scale();
@@ -58,7 +58,12 @@ impl RenderCommandList for CpuRenderCommandList {
                 for x in 0..size.x {
                     let p = vec2(x as f32, y as f32) + pixel_offset;
                     if triangle.contains(p) {
-                        image.pixels[(y * size.x + x) as usize] = color;
+                        let barycentric_coord = triangle.barycentric_coord(p);
+                        let mut color_sum = Vec3::ZERO;
+                        color_sum += colors[0].as_vec3() * barycentric_coord.x;
+                        color_sum += colors[1].as_vec3() * barycentric_coord.y;
+                        color_sum += colors[2].as_vec3() * barycentric_coord.z;
+                        image.pixels[(y * size.x + x) as usize] = color_sum.as_egui_color32();
                     }
                 }
             }

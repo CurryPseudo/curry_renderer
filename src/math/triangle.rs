@@ -20,6 +20,22 @@ impl Triangle {
                 && (self.c - self.b).perp_dot(p - self.b) < 0.0
                 && (self.a - self.c).perp_dot(p - self.c) < 0.0)
     }
+    pub fn barycentric_coord(&self, p: Vec2) -> Vec3 {
+        // https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+        let ca = self.c - self.a;
+        let ba = self.b - self.a;
+        let pa = p - self.a;
+        let d00 = ca.dot(ca);
+        let d01 = ca.dot(ba);
+        let d11 = ba.dot(ba);
+        let d20 = pa.dot(ca);
+        let d21 = pa.dot(ba);
+        let denom = d00 * d11 - d01 * d01;
+        let v = (d11 * d20 - d01 * d21) / denom;
+        let w = (d00 * d21 - d01 * d20) / denom;
+        let u = 1.0 - v - w;
+        vec3(u, v, w)
+    }
 }
 
 #[test]
@@ -33,4 +49,29 @@ fn test_triangle_contains() {
     assert!(!triangle.contains(vec2(-0.5, 0.5)));
     assert!(!triangle.contains(vec2(0.5, -0.5)));
     assert!(triangle.contains(vec2(0.1, 0.899)));
+}
+
+#[test]
+fn test_triangle_baycentric_coord() {
+    let triangle = Triangle::new(vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0));
+    assert_eq!(
+        triangle.barycentric_coord(vec2(0.0, 0.0)),
+        vec3(1.0, 0.0, 0.0)
+    );
+    assert_eq!(
+        triangle.barycentric_coord(vec2(1.0, 0.0)),
+        vec3(0.0, 1.0, 0.0)
+    );
+    assert_eq!(
+        triangle.barycentric_coord(vec2(0.0, 1.0)),
+        vec3(0.0, 0.0, 1.0)
+    );
+    assert_eq!(
+        triangle.barycentric_coord(vec2(0.5, 0.5)),
+        vec3(0.0, 0.5, 0.5)
+    );
+    assert_eq!(
+        triangle.barycentric_coord(vec2(0.0, 0.5)),
+        vec3(0.5, 0.0, 0.5)
+    );
 }

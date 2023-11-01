@@ -5,8 +5,10 @@ use crate::*;
 pub struct AppPersistentState {}
 pub struct App {
     persistent_state: AppPersistentState,
-    red_triangle: Triangle,
-    blue_triangle: Triangle,
+    triangle_0: Triangle,
+    triangle_0_colors: [egui::Color32; 3],
+    triangle_1: Triangle,
+    triangle_1_colors: [egui::Color32; 3],
     renderer: Box<dyn Renderer>,
     frame_time: std::time::Duration,
     viewport_editor: ViewportEditor,
@@ -28,12 +30,19 @@ impl App {
         let renderer = Box::new(CpuRenderer::default());
         Self {
             persistent_state,
-            red_triangle: Triangle::new(vec2(370.0, 320.0), vec2(490.0, 120.0), vec2(200.0, 220.0)),
-            blue_triangle: Triangle::new(
-                vec2(320.0, 370.0),
-                vec2(120.0, 490.0),
-                vec2(220.0, 200.0),
-            ),
+            triangle_0: Triangle::new(vec2(370.0, 320.0), vec2(490.0, 120.0), vec2(200.0, 220.0)),
+            triangle_0_colors: [
+                egui::Color32::RED,
+                egui::Color32::BLUE,
+                egui::Color32::YELLOW,
+            ],
+            triangle_1: Triangle::new(vec2(320.0, 370.0), vec2(120.0, 490.0), vec2(220.0, 200.0)),
+            triangle_1_colors: [
+                egui::Color32::BLUE,
+                egui::Color32::GOLD,
+                egui::Color32::GREEN,
+            ],
+
             renderer,
             frame_time: Default::default(),
             viewport_editor: ViewportEditor::default(),
@@ -55,19 +64,19 @@ impl eframe::App for App {
             ui.heading("Renderer");
             ui.checkbox(&mut self.renderer.msaa_enable(), "MSAA");
             ui.checkbox(&mut self.renderer.ssaa_enable(), "SSAA");
-            ui.heading("Red Triangle");
+            ui.heading("Triangle 0");
             let frame_size = frame_size.as_vec2();
-            TriangleEditor {
+            TriangleWithColorEditor {
                 x_range: 0.0..=frame_size.x,
                 y_range: 0.0..=frame_size.y,
             }
-            .update(ui, &mut self.red_triangle);
-            ui.heading("Blue Triangle");
-            TriangleEditor {
+            .update(ui, &mut self.triangle_0, &mut self.triangle_0_colors);
+            ui.heading("Triangle 1");
+            TriangleWithColorEditor {
                 x_range: 0.0..=frame_size.x,
                 y_range: 0.0..=frame_size.y,
             }
-            .update(ui, &mut self.blue_triangle);
+            .update(ui, &mut self.triangle_1, &mut self.triangle_1_colors);
             ui.heading("Performance");
             ui.label(format!(
                 "Frame time: {:.3}ms",
@@ -82,14 +91,16 @@ impl eframe::App for App {
                 self.viewport_editor
                     .set_world_size(expect_image_size.as_vec2());
             }
-            let red_triangle = self.red_triangle.clone();
-            let blue_triangle = self.blue_triangle.clone();
+            let triangle_0 = self.triangle_0.clone();
+            let triangle_0_colors = self.triangle_0_colors.clone();
+            let triangle_1 = self.triangle_1.clone();
+            let triangle_1_colors = self.triangle_1_colors.clone();
             self.renderer
                 .render_current_frame_if_ready(Box::new(move |cmd_list, fb| {
                     let mut rt = cmd_list.create_render_target(fb.size());
                     cmd_list.clear(rt.as_mut());
-                    cmd_list.draw_triangle(&red_triangle, egui::Color32::RED, rt.as_mut());
-                    cmd_list.draw_triangle(&blue_triangle, egui::Color32::BLUE, rt.as_mut());
+                    cmd_list.draw_triangle(&triangle_0, &triangle_0_colors, rt.as_mut());
+                    cmd_list.draw_triangle(&triangle_1, &triangle_1_colors, rt.as_mut());
                     cmd_list.copy_render_target_to_frame_buffer(rt.as_ref(), fb);
                 }));
             self.frame_time = self.renderer.last_frame_time();

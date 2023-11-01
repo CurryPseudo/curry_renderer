@@ -4,8 +4,6 @@ mod render_target;
 pub use render_target::*;
 mod cpu;
 pub use cpu::*;
-mod antialiasing;
-pub use antialiasing::*;
 mod frame_buffer;
 pub use frame_buffer::*;
 mod texture;
@@ -29,7 +27,7 @@ pub trait RenderCommandList {
     fn draw_triangle(
         &self,
         triangle: &Triangle,
-        color: egui::Color32,
+        colors: &[egui::Color32; 3],
         target: &mut dyn RenderTarget,
     );
     fn copy_render_target_to_frame_buffer(
