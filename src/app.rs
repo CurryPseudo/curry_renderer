@@ -60,28 +60,30 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let frame_size = self.renderer.frame_size();
         egui::SidePanel::new(egui::panel::Side::Left, "left_panel").show(ctx, |ui| {
-            self.viewport_editor.update_side_panel(ui);
-            ui.heading("Renderer");
-            ui.checkbox(&mut self.renderer.msaa_enable(), "MSAA");
-            ui.checkbox(&mut self.renderer.ssaa_enable(), "SSAA");
-            ui.heading("Triangle 0");
-            let frame_size = frame_size.as_vec2();
-            TriangleWithColorEditor {
-                x_range: 0.0..=frame_size.x,
-                y_range: 0.0..=frame_size.y,
-            }
-            .update(ui, &mut self.triangle_0, &mut self.triangle_0_colors);
-            ui.heading("Triangle 1");
-            TriangleWithColorEditor {
-                x_range: 0.0..=frame_size.x,
-                y_range: 0.0..=frame_size.y,
-            }
-            .update(ui, &mut self.triangle_1, &mut self.triangle_1_colors);
-            ui.heading("Performance");
-            ui.label(format!(
-                "Frame time: {:.3}ms",
-                self.frame_time.as_secs_f64() * 1000.0
-            ));
+            egui::ScrollArea::new([false, true]).show(ui, |ui| {
+                self.viewport_editor.update_side_panel(ui);
+                ui.heading("Renderer");
+                ui.checkbox(&mut self.renderer.msaa_enable(), "MSAA");
+                ui.checkbox(&mut self.renderer.ssaa_enable(), "SSAA");
+                ui.heading("Triangle 0");
+                let frame_size = frame_size.as_vec2();
+                TriangleWithColorEditor {
+                    x_range: 0.0..=frame_size.x,
+                    y_range: 0.0..=frame_size.y,
+                }
+                .update(ui, &mut self.triangle_0, &mut self.triangle_0_colors);
+                ui.heading("Triangle 1");
+                TriangleWithColorEditor {
+                    x_range: 0.0..=frame_size.x,
+                    y_range: 0.0..=frame_size.y,
+                }
+                .update(ui, &mut self.triangle_1, &mut self.triangle_1_colors);
+                ui.heading("Performance");
+                ui.label(format!(
+                    "Frame time: {:.3}ms",
+                    self.frame_time.as_secs_f64() * 1000.0
+                ));
+            });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let expect_ui_size = ui.available_size();
