@@ -54,16 +54,20 @@ impl RenderCommandList for CpuRenderCommandList {
             .unwrap();
         cpu_rt.for_each_image_mut(|image, pixel_offset| {
             let size = image.size.as_uvec2();
-            for y in 0..size.y {
-                for x in 0..size.x {
-                    let p = vec2(x as f32, y as f32) + pixel_offset;
-                    if triangle.contains(p) {
-                        let barycentric_coord = triangle.barycentric_coord(p);
-                        let mut color_sum = Vec3::ZERO;
-                        color_sum += colors[0].as_vec3() * barycentric_coord.x;
-                        color_sum += colors[1].as_vec3() * barycentric_coord.y;
-                        color_sum += colors[2].as_vec3() * barycentric_coord.z;
-                        image.pixels[(y * size.x + x) as usize] = color_sum.as_egui_color32();
+            let aabb = triangle.aabb();
+            let uaabb = aabb.min_urect_outside();
+            if let Some(uaabb) = uaabb.intersect(&URect::new(UVec2::ZERO, size)) {
+                for y in uaabb.min.y..uaabb.max.y {
+                    for x in uaabb.min.x..uaabb.max.x {
+                        let p = vec2(x as f32, y as f32) + pixel_offset;
+                        if triangle.contains(p) {
+                            let barycentric_coord = triangle.barycentric_coord(p);
+                            let mut color_sum = Vec3::ZERO;
+                            color_sum += colors[0].as_vec3() * barycentric_coord.x;
+                            color_sum += colors[1].as_vec3() * barycentric_coord.y;
+                            color_sum += colors[2].as_vec3() * barycentric_coord.z;
+                            image.pixels[(y * size.x + x) as usize] = color_sum.as_egui_color32();
+                        }
                     }
                 }
             }

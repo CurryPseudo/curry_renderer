@@ -66,18 +66,18 @@ impl eframe::App for App {
                 ui.checkbox(&mut self.renderer.msaa_enable(), "MSAA");
                 ui.checkbox(&mut self.renderer.ssaa_enable(), "SSAA");
                 ui.heading("Triangle 0");
-                let frame_size = frame_size.as_vec2();
-                TriangleWithColorEditor {
-                    x_range: 0.0..=frame_size.x,
-                    y_range: 0.0..=frame_size.y,
-                }
-                .update(ui, &mut self.triangle_0, &mut self.triangle_0_colors);
+                //let frame_size = frame_size.as_vec2();
+                TriangleWithColorEditor::default().update(
+                    ui,
+                    &mut self.triangle_0,
+                    &mut self.triangle_0_colors,
+                );
                 ui.heading("Triangle 1");
-                TriangleWithColorEditor {
-                    x_range: 0.0..=frame_size.x,
-                    y_range: 0.0..=frame_size.y,
-                }
-                .update(ui, &mut self.triangle_1, &mut self.triangle_1_colors);
+                TriangleWithColorEditor::default().update(
+                    ui,
+                    &mut self.triangle_1,
+                    &mut self.triangle_1_colors,
+                );
                 ui.heading("Performance");
                 ui.label(format!(
                     "Frame time: {:.3}ms",
