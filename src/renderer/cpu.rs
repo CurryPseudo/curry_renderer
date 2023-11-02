@@ -42,11 +42,7 @@ impl RenderCommandList for CpuRenderCommandList {
         target: &mut dyn RenderTarget,
     ) {
         let image_scale = target.image_scale();
-        let triangle = Triangle {
-            a: triangle.a * image_scale,
-            b: triangle.b * image_scale,
-            c: triangle.c * image_scale,
-        };
+        let triangle = triangle.map(|p| p * image_scale);
         let triangle = &triangle;
         let cpu_rt = target
             .as_any_mut()

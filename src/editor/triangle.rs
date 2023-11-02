@@ -6,12 +6,12 @@ pub struct TriangleEditor {
 
 impl TriangleEditor {
     pub fn update(&self, ui: &mut egui::Ui, triangle: &mut Triangle) {
-        ui.add(egui::Slider::new(&mut triangle.a.x, self.x_range.clone()).text("a.x"));
-        ui.add(egui::Slider::new(&mut triangle.a.y, self.y_range.clone()).text("a.y"));
-        ui.add(egui::Slider::new(&mut triangle.b.x, self.x_range.clone()).text("b.x"));
-        ui.add(egui::Slider::new(&mut triangle.b.y, self.y_range.clone()).text("b.y"));
-        ui.add(egui::Slider::new(&mut triangle.c.x, self.x_range.clone()).text("c.x"));
-        ui.add(egui::Slider::new(&mut triangle.c.y, self.y_range.clone()).text("c.y"));
+        ui.add(egui::Slider::new(&mut triangle[0].x, self.x_range.clone()).text("a.x"));
+        ui.add(egui::Slider::new(&mut triangle[0].y, self.y_range.clone()).text("a.y"));
+        ui.add(egui::Slider::new(&mut triangle[1].x, self.x_range.clone()).text("b.x"));
+        ui.add(egui::Slider::new(&mut triangle[1].y, self.y_range.clone()).text("b.y"));
+        ui.add(egui::Slider::new(&mut triangle[2].x, self.x_range.clone()).text("c.x"));
+        ui.add(egui::Slider::new(&mut triangle[2].y, self.y_range.clone()).text("c.y"));
     }
 }
 
@@ -45,14 +45,14 @@ impl TriangleWithColorEditor {
                 }
             };
         }
-        triangle_x!(triangle.a.x, "a.x");
-        triangle_y!(triangle.a.y, "a.y");
+        triangle_x!(triangle[0].x, "a.x");
+        triangle_y!(triangle[0].y, "a.y");
         ui.color_edit_button_srgba(&mut triangle_colors[0]);
-        triangle_x!(triangle.b.x, "b.x");
-        triangle_y!(triangle.b.y, "b.y");
+        triangle_x!(triangle[1].x, "b.x");
+        triangle_y!(triangle[1].y, "b.y");
         ui.color_edit_button_srgba(&mut triangle_colors[1]);
-        triangle_x!(triangle.c.x, "c.x");
-        triangle_y!(triangle.c.y, "c.y");
+        triangle_x!(triangle[2].x, "c.x");
+        triangle_y!(triangle[2].y, "c.y");
         ui.color_edit_button_srgba(&mut triangle_colors[2]);
     }
 }
