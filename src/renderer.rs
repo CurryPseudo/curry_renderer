@@ -8,6 +8,7 @@ mod frame_buffer;
 pub use frame_buffer::*;
 mod texture;
 pub use texture::*;
+pub type RenderFrameFn = Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>;
 pub trait Renderer {
     fn msaa_enable(&mut self) -> &mut bool;
     fn ssaa_enable(&mut self) -> &mut bool;
@@ -15,7 +16,7 @@ pub trait Renderer {
     fn resize_frame(&mut self, new_size: UVec2);
     fn render_current_frame_if_ready(
         &mut self,
-        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
+        f: RenderFrameFn,
     );
     fn last_frame_time(&self) -> std::time::Duration;
     fn present(&self, ctx: &egui::Context) -> egui::TextureId;

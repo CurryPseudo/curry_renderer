@@ -144,10 +144,7 @@ impl Renderer for SyncCpuRenderer {
         self.frame_buffer.as_egui_texture_id(ctx)
     }
 
-    fn render_current_frame_if_ready(
-        &mut self,
-        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
-    ) {
+    fn render_current_frame_if_ready(&mut self, f: RenderFrameFn) {
         let frame_buffer = &mut self.frame_buffer;
         let frame_begin = Instant::now();
         let render_command_list = CpuRenderCommandList {
@@ -208,10 +205,7 @@ impl Renderer for AsyncCpuRenderer {
         self.frame_buffer.as_egui_texture_id(ctx)
     }
 
-    fn render_current_frame_if_ready(
-        &mut self,
-        f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
-    ) {
+    fn render_current_frame_if_ready(&mut self, f: RenderFrameFn) {
         let need_join = if let Some(handle) = &self.render_thread {
             handle.is_finished()
         } else {

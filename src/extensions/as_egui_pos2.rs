@@ -5,6 +5,6 @@ pub trait AsEguiPos {
 
 impl AsEguiPos for Vec2 {
     fn as_egui_pos(&self) -> egui::Pos2 {
-        egui::Pos2::new(self.x as f32, self.y as f32)
+        egui::Pos2::new(self.x, self.y)
     }
 }

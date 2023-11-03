@@ -27,7 +27,7 @@ impl App {
         } else {
             Default::default()
         };
-        let renderer = Box::new(CpuRenderer::default());
+        let renderer = Box::<CpuRenderer>::default();
         Self {
             persistent_state,
             triangle_0: Triangle::new(vec2(370.0, 320.0), vec2(490.0, 120.0), vec2(200.0, 220.0)),
@@ -63,8 +63,8 @@ impl eframe::App for App {
             egui::ScrollArea::new([false, true]).show(ui, |ui| {
                 self.viewport_editor.update_side_panel(ui);
                 ui.heading("Renderer");
-                ui.checkbox(&mut self.renderer.msaa_enable(), "MSAA");
-                ui.checkbox(&mut self.renderer.ssaa_enable(), "SSAA");
+                ui.checkbox(self.renderer.msaa_enable(), "MSAA");
+                ui.checkbox(self.renderer.ssaa_enable(), "SSAA");
                 ui.heading("Triangle 0");
                 //let frame_size = frame_size.as_vec2();
                 TriangleWithColorEditor::default().update(
@@ -93,10 +93,10 @@ impl eframe::App for App {
                 self.viewport_editor
                     .set_world_size(expect_image_size.as_vec2());
             }
-            let triangle_0 = self.triangle_0.clone();
-            let triangle_0_colors = self.triangle_0_colors.clone();
-            let triangle_1 = self.triangle_1.clone();
-            let triangle_1_colors = self.triangle_1_colors.clone();
+            let triangle_0 = self.triangle_0;
+            let triangle_0_colors = self.triangle_0_colors;
+            let triangle_1 = self.triangle_1;
+            let triangle_1_colors = self.triangle_1_colors;
             self.renderer
                 .render_current_frame_if_ready(Box::new(move |cmd_list, fb| {
                     let mut rt = cmd_list.create_render_target(fb.size());
