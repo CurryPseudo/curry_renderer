@@ -1,4 +1,5 @@
 use crate::*;
+
 mod frame_buffer;
 pub use frame_buffer::*;
 
@@ -9,7 +10,7 @@ pub struct SyncCpuRenderer {
     msaa_enable: bool,
     ssaa_enable: bool,
     frame_buffer: CpuFrameBuffer,
-    last_frame_time: std::time::Duration,
+    last_frame_time: Duration,
 }
 
 pub struct CpuRenderCommandList {
@@ -135,7 +136,7 @@ impl Renderer for SyncCpuRenderer {
         self.frame_buffer = CpuFrameBuffer::new(new_size);
     }
 
-    fn last_frame_time(&self) -> std::time::Duration {
+    fn last_frame_time(&self) -> Duration {
         self.last_frame_time
     }
 
@@ -148,7 +149,7 @@ impl Renderer for SyncCpuRenderer {
         f: Box<dyn Fn(&dyn RenderCommandList, &mut dyn FrameBuffer) + Send>,
     ) {
         let frame_buffer = &mut self.frame_buffer;
-        let frame_begin = std::time::Instant::now();
+        let frame_begin = Instant::now();
         let render_command_list = CpuRenderCommandList {
             msaa_enable: self.msaa_enable,
             ssaa_enable: self.ssaa_enable,
@@ -160,13 +161,13 @@ impl Renderer for SyncCpuRenderer {
 
 struct RenderThreadReturnData {
     frame_buffer: CpuFrameBuffer,
-    frame_time: std::time::Duration,
+    frame_time: Duration,
 }
 pub struct AsyncCpuRenderer {
     msaa_enable: bool,
     ssaa_enable: bool,
     frame_buffer: CpuFrameBuffer,
-    last_frame_time: std::time::Duration,
+    last_frame_time: Duration,
     render_thread: Option<std::thread::JoinHandle<RenderThreadReturnData>>,
 }
 
@@ -199,7 +200,7 @@ impl Renderer for AsyncCpuRenderer {
         self.frame_buffer = CpuFrameBuffer::new(new_size);
     }
 
-    fn last_frame_time(&self) -> std::time::Duration {
+    fn last_frame_time(&self) -> Duration {
         self.last_frame_time
     }
 
@@ -231,7 +232,7 @@ impl Renderer for AsyncCpuRenderer {
         let ssaa_enable = self.ssaa_enable;
         self.render_thread = Some(std::thread::spawn(move || {
             let mut frame_buffer = CpuFrameBuffer::new(size);
-            let frame_begin = std::time::Instant::now();
+            let frame_begin = Instant::now();
             let render_command_list = CpuRenderCommandList {
                 msaa_enable,
                 ssaa_enable,
@@ -249,4 +250,8 @@ impl Renderer for AsyncCpuRenderer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub type CpuRenderer = AsyncCpuRenderer;
+
+#[cfg(target_arch = "wasm32")]
+pub type CpuRenderer = SyncCpuRenderer;

@@ -1,6 +1,7 @@
 pub use glam::*;
 pub use std::any::Any;
 pub use uuid::Uuid;
+pub use web_time::{Duration, Instant};
 
 pub use std::sync::Arc;
 

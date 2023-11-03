@@ -16,6 +16,7 @@ eframe = { version = "0.23.0", default-features = false, features = [
 ] }
 log = "0.4"
 image = "0.24.6"
+web-time = "0.2.3"
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
@@ -28,8 +29,9 @@ env_logger = "0.10"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm_thread = { version = "0.2.0" }
 wasm-bindgen-futures = "0.4"
-
+getrandom = { version = "0.2.9", features = ["js"] }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
@@ -41,7 +43,7 @@ opt-level = 2
 
 [patch.crates-io]
 
-[dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 criterion = "0.5.1"
 
 [[bench]]
