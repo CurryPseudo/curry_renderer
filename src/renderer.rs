@@ -14,10 +14,7 @@ pub trait Renderer {
     fn ssaa_enable(&mut self) -> &mut bool;
     fn frame_size(&self) -> UVec2;
     fn resize_frame(&mut self, new_size: UVec2);
-    fn render_current_frame_if_ready(
-        &mut self,
-        f: RenderFrameFn,
-    );
+    fn render_current_frame_if_ready(&mut self, f: RenderFrameFn);
     fn last_frame_time(&self) -> std::time::Duration;
     fn present(&self, ctx: &egui::Context) -> egui::TextureId;
 }
