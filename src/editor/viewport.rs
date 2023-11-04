@@ -1,9 +1,10 @@
 use crate::*;
+
 pub struct ViewportEditor {
     grabing: bool,
-    zoom_in: f32,
-    zoom_offset: Vec2,
-    world_size: Vec2,
+    pub zoom_in: f32,
+    pub zoom_offset: Vec2,
+    pub world_size: Vec2,
 }
 
 impl Default for ViewportEditor {

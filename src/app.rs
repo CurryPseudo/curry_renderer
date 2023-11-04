@@ -12,6 +12,7 @@ pub struct App {
     renderer: Box<dyn Renderer>,
     frame_time: std::time::Duration,
     viewport_editor: ViewportEditor,
+    minimap_editor: MinimapEditor,
 }
 
 impl App {
@@ -46,6 +47,7 @@ impl App {
             renderer,
             frame_time: Default::default(),
             viewport_editor: ViewportEditor::default(),
+            minimap_editor: MinimapEditor::new(200.0),
         }
     }
 }
@@ -106,13 +108,16 @@ impl eframe::App for App {
                     cmd_list.copy_render_target_to_frame_buffer(rt.as_ref(), fb);
                 }));
             self.frame_time = self.renderer.last_frame_time();
+            let viewport_texture_id = self.renderer.present(ctx);
             let viewport_rect = ui
                 .add(
-                    egui::Image::new((self.renderer.present(ctx), expect_ui_size))
+                    egui::Image::new((viewport_texture_id, expect_ui_size))
                         .uv(self.viewport_editor.viewport_uv()),
                 )
                 .rect;
             self.viewport_editor.update_post_viewport(ui, viewport_rect);
+            self.minimap_editor
+                .update(ui, &self.viewport_editor, viewport_texture_id);
         });
         ctx.request_repaint();
     }
