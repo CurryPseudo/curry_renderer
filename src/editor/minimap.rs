@@ -19,8 +19,13 @@ impl MinimapEditor {
             return;
         }
         let max_rect = ui.max_rect();
-        let rect =
-            egui::Rect::from_min_max(max_rect.max - egui::Vec2::splat(self.size), max_rect.max);
+        let aspect_ratio = viewport_editor.world_size.y / viewport_editor.world_size.x;
+        let size = if aspect_ratio > 1.0 {
+            Vec2::new(self.size, self.size * aspect_ratio)
+        } else {
+            Vec2::new(self.size / aspect_ratio, self.size)
+        };
+        let rect = egui::Rect::from_min_max(max_rect.max - size.as_egui_vec2(), max_rect.max);
         ui.allocate_ui_at_rect(rect, |ui| {
             let (_response, painter) = ui.allocate_painter(rect.size(), egui::Sense::hover());
             let rect =
