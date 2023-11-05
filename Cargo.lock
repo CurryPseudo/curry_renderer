@@ -766,6 +766,7 @@ dependencies = [
 name = "curry_renderer"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "egui",
  "glam",
  "uuid",
@@ -2539,7 +2540,6 @@ dependencies = [
 name = "triangles_2d"
 version = "0.1.0"
 dependencies = [
- "criterion",
  "curry_renderer",
  "eframe",
  "egui",

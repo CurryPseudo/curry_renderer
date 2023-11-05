@@ -10,3 +10,11 @@ uuid = { workspace = true, features = ["v4"] }
 glam = { workspace = true }
 web-time = { workspace = true }
 egui = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "cpu_renderer"
+harness = false
+

@@ -30,13 +30,6 @@ wasm-bindgen-futures = "0.4"
 getrandom = { version = "0.2.9", features = ["js"] }
 
 
-[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-criterion = "0.5.1"
-
-[[bench]]
-name = "cpu_renderer"
-harness = false
-
 # If you want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }
 # eframe = { git = "https://github.com/emilk/egui", branch = "master" }
