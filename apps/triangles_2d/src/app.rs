@@ -1,4 +1,4 @@
-use crate::*;
+use curry_renderer::*;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)]

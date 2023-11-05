@@ -1,6 +1,6 @@
 use criterion::*;
-use curry_renderer::SyncCpuRenderer;
-use curry_renderer::*;
+use triangles_2d::SyncCpuRenderer;
+use triangles_2d::*;
 fn render_benchmark(c: &mut Criterion) {
     let mut cpu_renderer = SyncCpuRenderer::default();
     cpu_renderer.resize_frame(UVec2::new(1920, 1080));

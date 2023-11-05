@@ -5,9 +5,6 @@ pub use web_time::{Duration, Instant};
 
 pub use std::sync::Arc;
 
-mod app;
-pub use app::App;
-
 mod renderer;
 pub use renderer::*;
 

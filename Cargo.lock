@@ -766,18 +766,9 @@ dependencies = [
 name = "curry_renderer"
 version = "0.1.0"
 dependencies = [
- "criterion",
- "eframe",
  "egui",
- "env_logger",
- "getrandom",
  "glam",
- "image",
- "log",
- "serde",
  "uuid",
- "wasm-bindgen-futures",
- "wasm_thread",
  "web-time",
 ]
 
@@ -2542,6 +2533,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0955b8137a1df6f1a2e9a37d8a6656291ff0297c1a97c24e0d8425fe2312f79a"
 dependencies = [
  "once_cell",
+]
+
+[[package]]
+name = "triangles_2d"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "curry_renderer",
+ "eframe",
+ "egui",
+ "env_logger",
+ "getrandom",
+ "image",
+ "log",
+ "serde",
+ "wasm-bindgen-futures",
+ "wasm_thread",
 ]
 
 [[package]]
