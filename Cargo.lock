@@ -407,6 +407,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "box_3d"
+version = "0.1.0"
+dependencies = [
+ "curry_renderer",
+ "eframe",
+ "egui",
+ "env_logger",
+ "getrandom",
+ "image",
+ "log",
+ "serde",
+ "wasm-bindgen-futures",
+ "wasm_thread",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

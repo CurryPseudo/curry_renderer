@@ -1,4 +1,5 @@
 use crate::*;
+use egui::Color32;
 
 mod frame_buffer;
 pub use frame_buffer::*;
@@ -36,9 +37,9 @@ impl RenderCommandList for CpuRenderCommandList {
         });
     }
 
-    fn draw_triangle(
+    fn draw_triangle2d(
         &self,
-        triangle: &Triangle,
+        triangle: &Triangle2d,
         colors: &[egui::Color32; 3],
         target: &mut dyn RenderTarget,
     ) {
@@ -52,13 +53,48 @@ impl RenderCommandList for CpuRenderCommandList {
         cpu_rt.for_each_image_mut(|image, pixel_offset| {
             let size = image.size.as_uvec2();
             let aabb = triangle.aabb();
-            let uaabb = aabb.min_urect_outside();
-            if let Some(uaabb) = uaabb.intersect(&URect::new(UVec2::ZERO, size)) {
+            let uaabb = aabb.min_ubox2d_outside();
+            if let Some(uaabb) = uaabb.intersect(&UBox2d::new(UVec2::ZERO, size)) {
                 for y in uaabb.min.y..uaabb.max.y {
                     for x in uaabb.min.x..uaabb.max.x {
                         let p = vec2(x as f32, y as f32) + pixel_offset;
                         if triangle.contains(p) {
                             let barycentric_coord = triangle.barycentric_coord(p);
+                            let mut color_sum = Vec3::ZERO;
+                            color_sum += colors[0].as_vec3() * barycentric_coord.x;
+                            color_sum += colors[1].as_vec3() * barycentric_coord.y;
+                            color_sum += colors[2].as_vec3() * barycentric_coord.z;
+                            image.pixels[(y * size.x + x) as usize] = color_sum.as_egui_color32();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    fn draw_triangle3d(
+        &self,
+        triangle: &Triangle3d,
+        colors: &[Color32; 3],
+        target: &mut dyn RenderTarget,
+    ) {
+        let image_scale = target.image_scale();
+        let triangle = triangle.map(|p| p * image_scale);
+        let triangle = &triangle;
+        let cpu_rt = target
+            .as_any_mut()
+            .downcast_mut::<CpuRenderTarget>()
+            .unwrap();
+        cpu_rt.for_each_image_mut(|image, pixel_offset| {
+            let size = image.size.as_uvec2();
+            let aabb = triangle.project_to_xy().aabb();
+            let uaabb = aabb.min_ubox2d_outside();
+            if let Some(uaabb) = uaabb.intersect(&UBox2d::new(UVec2::ZERO, size)) {
+                for y in uaabb.min.y..uaabb.max.y {
+                    for x in uaabb.min.x..uaabb.max.x {
+                        let p = vec2(x as f32, y as f32) + pixel_offset;
+                        if triangle.project_to_xy().contains(p) {
+                            let barycentric_coord = triangle.project_to_xy().barycentric_coord(p);
                             let mut color_sum = Vec3::ZERO;
                             color_sum += colors[0].as_vec3() * barycentric_coord.x;
                             color_sum += colors[1].as_vec3() * barycentric_coord.y;

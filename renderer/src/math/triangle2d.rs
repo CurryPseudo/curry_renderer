@@ -1,22 +1,22 @@
 use crate::*;
 
 #[derive(Clone, Copy)]
-pub struct Triangle([Vec2; 3]);
+pub struct Triangle2d([Vec2; 3]);
 
-impl std::ops::Index<usize> for Triangle {
+impl std::ops::Index<usize> for Triangle2d {
     type Output = Vec2;
     fn index(&self, index: usize) -> &Self::Output {
         &self.0[index]
     }
 }
 
-impl std::ops::IndexMut<usize> for Triangle {
+impl std::ops::IndexMut<usize> for Triangle2d {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
 
-impl Triangle {
+impl Triangle2d {
     pub fn new(a: Vec2, b: Vec2, c: Vec2) -> Self {
         Self([a, b, c])
     }
@@ -29,10 +29,10 @@ impl Triangle {
                 && (self[2] - self[1]).perp_dot(p - self[1]) < 0.0
                 && (self[0] - self[2]).perp_dot(p - self[2]) < 0.0)
     }
-    pub fn aabb(&self) -> Rect {
+    pub fn aabb(&self) -> Box2d {
         let min = self[0].min(self[1]).min(self[2]);
         let max = self[0].max(self[1]).max(self[2]);
-        Rect { min, max }
+        Box2d { min, max }
     }
     pub fn barycentric_coord(&self, p: Vec2) -> Vec3 {
         // https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
@@ -51,14 +51,14 @@ impl Triangle {
         vec3(u, w, v)
     }
 
-    pub fn map(self, f: impl Fn(Vec2) -> Vec2) -> Triangle {
+    pub fn map(self, f: impl Fn(Vec2) -> Vec2) -> Triangle2d {
         Self(self.0.map(f))
     }
 }
 
 #[test]
 fn test_triangle_contains() {
-    let triangle = Triangle::new(vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0));
+    let triangle = Triangle2d::new(vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0));
     assert!(!triangle.contains(vec2(0.5, 0.5)));
     assert!(triangle.contains(vec2(0.4999, 0.4999)));
     assert!(triangle.contains(vec2(0.1, 0.3)));
@@ -70,8 +70,8 @@ fn test_triangle_contains() {
 }
 
 #[test]
-fn test_triangle_baycentric_coord() {
-    let triangle = Triangle::new(vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0));
+fn test_triangle_barycentric_coord() {
+    let triangle = Triangle2d::new(vec2(0.0, 0.0), vec2(1.0, 0.0), vec2(0.0, 1.0));
     assert_eq!(
         triangle.barycentric_coord(vec2(0.0, 0.0)),
         vec3(1.0, 0.0, 0.0)
@@ -96,6 +96,9 @@ fn test_triangle_baycentric_coord() {
 
 #[test]
 fn test_triangle_aabb() {
-    let triangle = Triangle::new(vec2(-0.5, -0.5), vec2(1.0, 0.0), vec2(0.0, 1.0));
-    assert_eq!(triangle.aabb(), Rect::new(vec2(-0.5, -0.5), vec2(1.0, 1.0)));
+    let triangle = Triangle2d::new(vec2(-0.5, -0.5), vec2(1.0, 0.0), vec2(0.0, 1.0));
+    assert_eq!(
+        triangle.aabb(),
+        Box2d::new(vec2(-0.5, -0.5), vec2(1.0, 1.0))
+    );
 }

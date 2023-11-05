@@ -22,9 +22,15 @@ pub trait Renderer {
 pub trait RenderCommandList {
     fn create_render_target(&self, size: UVec2) -> Box<dyn RenderTarget>;
     fn clear(&self, target: &mut dyn RenderTarget);
-    fn draw_triangle(
+    fn draw_triangle2d(
         &self,
-        triangle: &Triangle,
+        triangle: &Triangle2d,
+        colors: &[egui::Color32; 3],
+        target: &mut dyn RenderTarget,
+    );
+    fn draw_triangle3d(
+        &self,
+        triangle: &Triangle3d,
         colors: &[egui::Color32; 3],
         target: &mut dyn RenderTarget,
     );

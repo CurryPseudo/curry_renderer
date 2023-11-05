@@ -1,11 +1,11 @@
 use crate::*;
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub struct Rect {
+pub struct Box2d {
     pub min: Vec2,
     pub max: Vec2,
 }
 
-impl Rect {
+impl Box2d {
     pub fn new(min: Vec2, max: Vec2) -> Self {
         Self { min, max }
     }
@@ -15,8 +15,8 @@ impl Rect {
             max: center + size / 2.0,
         }
     }
-    pub fn min_urect_outside(&self) -> URect {
-        URect::new(
+    pub fn min_ubox2d_outside(&self) -> UBox2d {
+        UBox2d::new(
             self.min.floor().as_uvec2(),
             self.max.ceil().as_uvec2() + UVec2::ONE,
         )
@@ -24,12 +24,12 @@ impl Rect {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub struct URect {
+pub struct UBox2d {
     pub min: UVec2,
     pub max: UVec2,
 }
 
-impl URect {
+impl UBox2d {
     pub fn new(min: UVec2, max: UVec2) -> Self {
         Self { min, max }
     }
