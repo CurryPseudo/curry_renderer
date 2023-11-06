@@ -785,6 +785,7 @@ dependencies = [
  "criterion",
  "egui",
  "glam",
+ "image",
  "uuid",
  "web-time",
 ]

@@ -85,13 +85,25 @@ impl RenderCommandList for CpuRenderCommandList {
             .as_any_mut()
             .downcast_mut::<CpuRenderTarget>()
             .unwrap();
-        cpu_rt.for_each_image_mut(|image, pixel_offset| {
-            let size = image.size.as_uvec2();
-            let aabb = triangle.project_to_xy().aabb();
-            let uaabb = aabb.min_ubox2d_outside();
-            if let Some(uaabb) = uaabb.intersect(&UBox2d::new(UVec2::ZERO, size)) {
-                for y in uaabb.min.y..uaabb.max.y {
-                    for x in uaabb.min.x..uaabb.max.x {
+        let aabb = triangle.project_to_xy().aabb();
+        let uaabb = aabb.min_ubox2d_outside();
+        let size = cpu_rt.size() * (image_scale as u32);
+        if let Some(uaabb) = uaabb.intersect(&UBox2d::new(UVec2::ZERO, size)) {
+            for y in uaabb.min.y..uaabb.max.y {
+                for x in uaabb.min.x..uaabb.max.x {
+                    let p = vec2(x as f32 + 0.5, y as f32 + 0.5);
+                    let barycentric_coord = triangle.project_to_xy().barycentric_coord(p);
+                    let z = barycentric_coord
+                        .dot(Vec3::new(triangle[0].z, triangle[1].z, triangle[2].z))
+                        .clamp(0.0, 1.0);
+                    let z_u8 = (z * 255.0) as u8;
+                    let pixel = cpu_rt.depth_image.get_pixel_mut(x, y);
+                    if pixel.0[0] < z_u8 {
+                        continue;
+                    }
+                    pixel.0[0] = z_u8;
+                    cpu_rt.for_each_image_mut(|image, pixel_offset| {
+                        let size = image.size.as_uvec2();
                         let p = vec2(x as f32, y as f32) + pixel_offset;
                         if triangle.project_to_xy().contains(p) {
                             let barycentric_coord = triangle.project_to_xy().barycentric_coord(p);
@@ -101,10 +113,10 @@ impl RenderCommandList for CpuRenderCommandList {
                             color_sum += colors[2].as_vec3() * barycentric_coord.z;
                             image.pixels[(y * size.x + x) as usize] = color_sum.as_egui_color32();
                         }
-                    }
+                    });
                 }
             }
-        });
+        }
     }
 
     fn copy_render_target_to_frame_buffer(

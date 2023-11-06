@@ -6,6 +6,7 @@ pub enum CpuRenderTargetImage {
 }
 pub struct CpuRenderTarget {
     pub(crate) image: CpuRenderTargetImage,
+    pub(crate) depth_image: ImageBuffer<Luma<u8>, Vec<u8>>,
     pub(crate) super_sampled_scale: u32,
 }
 impl CpuRenderTarget {
@@ -25,6 +26,7 @@ impl CpuRenderTarget {
             } else {
                 CpuRenderTargetImage::Idle(one_image)
             },
+            depth_image: ImageBuffer::new(size.x, size.y),
             super_sampled_scale,
         }
     }
