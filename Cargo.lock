@@ -407,22 +407,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "box_3d"
-version = "0.1.0"
-dependencies = [
- "curry_renderer",
- "eframe",
- "egui",
- "env_logger",
- "getrandom",
- "image",
- "log",
- "serde",
- "wasm-bindgen-futures",
- "wasm_thread",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -787,6 +771,22 @@ dependencies = [
  "glam",
  "uuid",
  "web-time",
+]
+
+[[package]]
+name = "curry_renderer_app"
+version = "0.1.0"
+dependencies = [
+ "curry_renderer",
+ "eframe",
+ "egui",
+ "env_logger",
+ "getrandom",
+ "image",
+ "log",
+ "serde",
+ "wasm-bindgen-futures",
+ "wasm_thread",
 ]
 
 [[package]]
@@ -2550,22 +2550,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0955b8137a1df6f1a2e9a37d8a6656291ff0297c1a97c24e0d8425fe2312f79a"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "triangles_2d"
-version = "0.1.0"
-dependencies = [
- "curry_renderer",
- "eframe",
- "egui",
- "env_logger",
- "getrandom",
- "image",
- "log",
- "serde",
- "wasm-bindgen-futures",
- "wasm_thread",
 ]
 
 [[package]]
