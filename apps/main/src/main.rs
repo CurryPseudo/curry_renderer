@@ -1,6 +1,13 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+pub use curry_renderer::*;
+
+mod main_app;
+
+pub use main_app::*;
+
 mod app;
+
 pub use app::*;
 
 // When compiling natively:
@@ -16,7 +23,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Curry Renderer",
         native_options,
-        Box::new(|cc| Box::new(App::new(cc))),
+        Box::new(|cc| Box::new(MainApp::new(cc))),
     )
 }
 
@@ -33,7 +40,7 @@ fn main() {
             .start(
                 "the_canvas_id", // hardcode it
                 web_options,
-                Box::new(|cc| Box::new(App::new(cc))),
+                Box::new(|cc| Box::new(MainApp::new(cc))),
             )
             .await
             .expect("failed to start eframe");

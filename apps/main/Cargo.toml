@@ -1,5 +1,5 @@
 [package]
-name = "triangles_2d"
+name = "main"
 version = "0.1.0"
 authors = ["Curry Pseudo <currypseudo@gmail.com>"]
 edition = "2021"
