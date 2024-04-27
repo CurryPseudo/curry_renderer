@@ -6,7 +6,6 @@ pub mod triangle2d;
 
 pub use triangle2d::*;
 
-
 pub struct AppFactory {
     pub name: &'static str,
     pub factory: Box<dyn Fn() -> Box<dyn App>>,

@@ -1,6 +1,6 @@
+use crate::*;
 use eframe::Frame;
 use egui::Context;
-use crate::*;
 
 pub struct Triangle2DApp {
     triangle_0: Triangle2d,

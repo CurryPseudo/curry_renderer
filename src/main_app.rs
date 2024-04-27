@@ -1,10 +1,8 @@
-use curry_renderer::*;
 use crate::*;
 
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 #[serde(default)]
 pub struct AppPersistentState {}
-
 
 pub struct MainApp {
     persistent_state: AppPersistentState,
@@ -28,11 +26,11 @@ impl MainApp {
         let app_factories: Vec<AppFactory> = vec![
             AppFactory {
                 name: "Triangle3D",
-                factory: Box::new(|| Box::new(Triangle3DApp::default())),
+                factory: Box::new(|| Box::<Triangle3DApp>::default()),
             },
             AppFactory {
                 name: "Triangle2D",
-                factory: Box::new(|| Box::new(Triangle2DApp::default())),
+                factory: Box::new(|| Box::<Triangle2DApp>::default()),
             },
         ];
         let current_app = app_factories[0].new_app();
@@ -56,7 +54,13 @@ impl eframe::App for MainApp {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("App", |ui| {
                     for app_factory in &self.app_factories {
-                        if ui.radio(app_factory.name == self.current_app.name(), app_factory.name).clicked() {
+                        if ui
+                            .radio(
+                                app_factory.name == self.current_app.name(),
+                                app_factory.name,
+                            )
+                            .clicked()
+                        {
                             self.current_app = app_factory.new_app();
                             ui.close_menu();
                         }
